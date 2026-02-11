@@ -14,7 +14,7 @@ var sampleFoodshareItems = [
         name: "Computer Science Club Pizza",
         endTime: Date().addingTimeInterval(3600),
         description: "Pizza and breadsticks",
-        foodRestrictions: ["Vegetarian"],
+        foodRestrictions: ["Vegan"],
         imageURL: "https://picsum.photos/200",
         building: "Neville Hall",
         classRoomNumber: "101"

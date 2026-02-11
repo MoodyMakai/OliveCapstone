@@ -36,26 +36,23 @@ class BuildingLocator {
         )
     ]
     
-    // MARK: - Public Accessors
     
-    /// Returns a sorted list of all building names (e.g. ["DPC Hall", "Ferland Hall"...])
+    // Returns a sorted list of all building names
     public func allAliases() -> [String] {
         buildings.keys.sorted()
     }
     
-    /// Returns the display address string
+    // Returns the display address string
     public func address(for alias: String) -> String? {
         findBuilding(alias)?.address
     }
     
-    /// Returns the exact coordinate
+    // Returns the exact coordinate
     public func coordinate(for alias: String) -> CLLocationCoordinate2D? {
         findBuilding(alias)?.coordinate
     }
     
-    // MARK: - Map Logic
-    
-    /// Returns a URL that opens Apple Maps using EXACT coordinates
+    // Returns a URL that opens Apple Maps using EXACT coordinates
     func mapsURL(for alias: String) -> URL? {
         guard let info = findBuilding(alias) else { return nil }
         
@@ -70,8 +67,6 @@ class BuildingLocator {
         
         return URL(string: urlString)
     }
-    
-    // MARK: - Helper
     
     // Helper to handle case-insensitive lookup
     private func findBuilding(_ alias: String) -> BuildingInfo? {
