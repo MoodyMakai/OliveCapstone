@@ -1,21 +1,23 @@
-.PHONY: all help install venv run test clean
+.PHONY: all install run test clean
 
 VENV = .venv
 PYTHON = $(VENV)/bin/python3
 PIP = $(VENV)/bin/pip
+FLASK = $(VENV)/bin/flask
 
-install: $(VENV)/bin/activate
-	$(PIP) install -r requirements.txt
+all: run
 
-$(VENV)/bin/activate: requirements.txt
+$(VENV)/bin/activate:
 	python3 -m venv $(VENV)
+
+install: $(VENV)/bin/activate requirements.txt
 	$(PIP) install -r requirements.txt
 	touch $(VENV)/bin/activate
 
-run: $(VENV)/bin/activate
-	flask --app app run
+run: install
+	$(FLASK) --app app run
 
-test: $(VENV)/bin/activate
+test: install
 	$(PYTHON) -m pytest
 
 clean:
