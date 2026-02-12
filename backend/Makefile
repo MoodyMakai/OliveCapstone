@@ -1,9 +1,10 @@
-.PHONY: all install run test clean
+.PHONY: all install run test clean check lint activate
 
 VENV = .venv
 PYTHON = $(VENV)/bin/python3
 PIP = $(VENV)/bin/pip
-FLASK = $(VENV)/bin/flask
+QUART = $(VENV)/bin/quart
+RUFF = $(VENV)/bin/ruff
 
 all: run
 
@@ -14,11 +15,17 @@ install: $(VENV)/bin/activate requirements.txt
 	$(PIP) install -r requirements.txt
 	touch $(VENV)/bin/activate
 
-run: install
-	$(FLASK) --app app run
+run:
+	$(QUART) run
 
-test: install
+test:
 	$(PYTHON) -m pytest
+
+check:
+	$(RUFF) check .
+
+lint:
+	$(RUFF) format .
 
 clean:
 	rm -rf $(VENV)

@@ -3,4 +3,5 @@
 .env
 .vscode
 __pycache__
-.pytest_cache
+.*_cache
+*.sqlite
