@@ -1,0 +1,18 @@
+[project]
+name = "bbfs-backend"
+version = "0.0.1"
+dependencies = [
+    "quart",
+    "aiosqlite",
+    "ruff",
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto" # Needed for Quart

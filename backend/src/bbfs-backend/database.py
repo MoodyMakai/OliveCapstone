@@ -1,6 +1,5 @@
 import re
 from dataclasses import dataclass
-from tkinter.constants import FALSE
 from typing import Optional
 
 import aiosqlite

@@ -1,4 +1,0 @@
-quart
-ruff
-pytest
-aiosqlite
