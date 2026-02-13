@@ -1,0 +1,5 @@
+quart
+aiosqlite
+ruff
+pytest
+pytest-asyncio

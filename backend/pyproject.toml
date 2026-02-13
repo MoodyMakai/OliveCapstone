@@ -1,18 +1,12 @@
 [project]
 name = "bbfs-backend"
-version = "0.0.1"
-dependencies = [
-    "quart",
-    "aiosqlite",
-    "ruff",
-    "pytest",
-    "pytest-asyncio",
-]
+version = "0.1.0"
 
 [tool.ruff]
 line-length = 88
-select = ["E", "F", "I"]
+lint.select = ["E", "F", "I", "UP", "ASYNC"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
 asyncio_mode = "auto" # Needed for Quart
+testpaths = ["tests"]
+pythonpath = ["src"]
