@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 import aiosqlite
 
@@ -15,8 +16,9 @@ class User:
 @dataclass
 class Picture:
     picture_id: int
-    expires: str
-    data: bytes
+    expires: datetime
+    filepath: str
+    mimetype: str
 
 
 @dataclass
@@ -63,13 +65,15 @@ def unpack_picture_from_row(row: dict) -> Picture | None:
         return None
     picture_id = row.get("picture_id")
     expires = row.get("expires")
-    data = row.get("data")
-    if picture_id is None or expires is None or data is None:
+    filepath = row.get("filepath")
+    mimetype = row.get("mimetype")
+    if picture_id is None or expires is None or filepath is None or mimetype is None:
         return None
     return Picture(
         picture_id=int(picture_id),
         expires=str(expires),
-        data=bytes(data),
+        filepath=str(filepath),
+        mimetype=str(mimetype),
     )
 
 
@@ -115,7 +119,8 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS pictures (
                 picture_id INTEGER PRIMARY KEY,
                 expires TEXT NOT NULL,
-                data BLOB NOT NULL
+                filepath TEXT NOT NULL,
+                mimetype TEXT NOT NULL
             );
             """,
             """
@@ -197,3 +202,21 @@ class DatabaseManager:
     async def delete_user_by_id(self, user_id: int):
         await self.conn.execute("DELETE FROM users where user_id = ?", (user_id,))
         await self.conn.commit()
+
+    # Picture functions
+
+    async def add_picture(
+        self, expires: datetime, filepath: str, mimetype: str
+    ) -> int | None:
+        # sanity check if date is earlier than current date
+        if expires <= datetime.now():
+            return None
+        async with self.conn.execute(
+            "INSERT INTO pictures (expires, filepath, mimetype) VALUES (?, ?, ?)",
+            (expires, datetime, mimetype),
+        ) as cursor:
+            picture_id = cursor.lastrowid
+            await self.conn.commit()
+            return picture_id
+
+    
