@@ -2,7 +2,6 @@ import re
 from dataclasses import dataclass
 
 import aiosqlite
-from anyio import Path, open_file
 
 
 @dataclass
@@ -26,6 +25,7 @@ class Foodshare:
     location: str
     end_date: str
     active: bool
+    user: User | None = None
     picture: Picture | None = None
 
 
@@ -121,20 +121,20 @@ class DatabaseManager:
             """
             CREATE TABLE IF NOT EXISTS foodshares (
                 foodshare_id INTEGER PRIMARY KEY,
-                creator_id INTEGER REFERENCES users(user_id),
                 location TEXT,
-                picture_fk_id INTEGER REFERENCES pictures(picture_id),
                 end_date TEXT NOT NULL,
-                active INTEGER
+                active INTEGER,
+                creator_id INTEGER REFERENCES users(user_id),
+                picture_fk_id INTEGER REFERENCES pictures(picture_id)
             );
             """,
             """
             CREATE TABLE IF NOT EXISTS surveys (
                 survey_id INTEGER PRIMARY KEY,
-                foodshare_fk_id INTEGER REFERENCES foodshares(foodshare_id),
                 num_participants INTEGER,
                 experience INTEGER,
-                other_thoughts TEXT
+                other_thoughts TEXT,
+                foodshare_fk_id INTEGER REFERENCES foodshares(foodshare_id)
             );
             """,
         ]
@@ -144,14 +144,19 @@ class DatabaseManager:
 
     # User functions
 
-    async def add_user(self, email: str) -> bool:
+    async def add_user(
+        self, email: str, verified: bool = False, banned: bool = False
+    ) -> int | None:
         if not validate_email_format(email):
-            return False
-        await self.conn.execute(
-            "INSERT INTO users (email, verified, banned) VALUES (?, 0, 0)", (email,)
-        )
-        await self.conn.commit()
-        return True
+            return None
+
+        async with self.conn.execute(
+            "INSERT INTO users (email, verified, banned) VALUES (?, ?, ?)",
+            (email, int(verified), int(banned)),
+        ) as cursor:
+            user_id = cursor.lastrowid
+            await self.conn.commit()
+            return user_id
 
     async def get_user_by_id(self, user_id: int) -> User | None:
         async with self.conn.execute(
@@ -190,5 +195,5 @@ class DatabaseManager:
         await self.conn.commit()
 
     async def delete_user_by_id(self, user_id: int):
-        await self.conn.execute("DELETE FROM users where user_id = ?", user_id)
+        await self.conn.execute("DELETE FROM users where user_id = ?", (user_id,))
         await self.conn.commit()
