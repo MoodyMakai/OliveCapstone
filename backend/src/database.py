@@ -1,8 +1,8 @@
 import re
 from dataclasses import dataclass
-from pathlib import Path
 
 import aiosqlite
+from anyio import Path, open_file
 
 
 @dataclass
@@ -41,7 +41,7 @@ class Survey:
 # Helper functions for the database
 
 
-def get_user_from_row(row: dict) -> User | None:
+def unpack_user_from_row(row: dict) -> User | None:
     if row is None:
         return None
     user_id = row.get("user_id")
@@ -58,7 +58,7 @@ def get_user_from_row(row: dict) -> User | None:
     )
 
 
-def get_picture_from_row(row: dict) -> Picture | None:
+def unpack_picture_from_row(row: dict) -> Picture | None:
     if row is None:
         return None
     picture_id = row.get("picture_id")
@@ -87,7 +87,6 @@ def validate_email_format(email: str) -> bool:
 class DatabaseManager:
     def __init__(self, db_path: str) -> None:
         self.db_path: str = db_path
-        self.conn = None
 
     async def connect(self):
         # Connect to the database
@@ -106,7 +105,7 @@ class DatabaseManager:
         schema_path = Path(__file__).parent / "schema.sql"
         if not self.conn:
             return
-        with open(schema_path) as f:  # noqa: ASYNC230
+        async with await open_file(schema_path) as f:
             await self.conn.executescript(f.read())
         await self.conn.commit()
 
@@ -128,7 +127,7 @@ class DatabaseManager:
             row = await cursor.fetchone()
             if not isinstance(row, dict):
                 return None
-            return get_user_from_row(row)
+            return unpack_user_from_row(row)
 
     async def get_user_by_email(self, email: str) -> User | None:
         cursor = await self.conn.execute("SELECT * FROM users WHERE email = ?", email)
@@ -137,7 +136,7 @@ class DatabaseManager:
             return None
         if not isinstance(row, dict):
             return None
-        return get_user_from_row(row)
+        return unpack_user_from_row(row)
 
     async def update_user_verification(self, user_id: int, new_status: bool):
         new_verification = 1 if new_status else 0
