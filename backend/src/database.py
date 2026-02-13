@@ -87,16 +87,16 @@ def validate_email_format(email: str) -> bool:
 class DatabaseManager:
     def __init__(self, db_path: str) -> None:
         self.db_path: str = db_path
-        self.connect()
+        self.conn = None
 
-    def connect(self):
+    async def connect(self):
         # Connect to the database
-        self.conn = aiosqlite.connect(self.db_path)
+        self.conn = await aiosqlite.connect(self.db_path)
         self.conn.row_factory = aiosqlite.Row  # Returns dicts by default
 
         # Set config options
-        self.conn.execute("PRAGMA journal_mode=WAL")  # Helps concurrency
-        self.conn.execute("PRAGMA foreign_keys=ON")  # Enables foreign keys
+        await self.conn.execute("PRAGMA journal_mode=WAL")  # Helps concurrency
+        await self.conn.execute("PRAGMA foreign_keys=ON")  # Enables foreign keys
 
     async def close(self):
         if self.conn:
@@ -107,7 +107,7 @@ class DatabaseManager:
         if not self.conn:
             return
         with open(schema_path) as f:  # noqa: ASYNC230
-            self.conn.executescript(f.read())
+            await self.conn.executescript(f.read())
         await self.conn.commit()
 
     # User functions

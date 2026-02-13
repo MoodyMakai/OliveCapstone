@@ -1,5 +1,6 @@
-from database import DatabaseManager
 from quart import Quart
+
+from src.database import DatabaseManager
 
 
 class QuartApp(Quart):
@@ -19,14 +20,15 @@ def hello_world():
 @app.before_serving
 async def startup():
     # Add the database manager to the app
-    app.db = DatabaseManager(app.config["DB_PATH"])
+    app.db = DatabaseManager(db_path=app.config["DB_PATH"])
+    await app.db.connect()
     await app.db.init_tables()
 
 
 @app.after_serving
 async def shutdown():
     # Close the database
-    await app.db.conn.close()
+    await app.db.close()
 
 
 if __name__ == "__main__":
