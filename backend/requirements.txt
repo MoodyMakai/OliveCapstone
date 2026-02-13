@@ -1,4 +1,6 @@
-flask
+quart
+aiosqlite
 ruff
 pytest
-aiosqlite
+pytest-asyncio
+anyio
