@@ -71,7 +71,7 @@ def unpack_picture_from_row(row: dict) -> Picture | None:
         return None
     return Picture(
         picture_id=int(picture_id),
-        expires=str(expires),
+        expires=datetime.fromisoformat(expires),
         filepath=str(filepath),
         mimetype=str(mimetype),
     )
@@ -79,7 +79,7 @@ def unpack_picture_from_row(row: dict) -> Picture | None:
 
 def validate_email_format(email: str) -> bool:
     # Regex explanation:
-    # [^@\s]+: One or more characters that aren't '@' or whitespace
+    # [^@\s]+: Matches one or more characters that aren't '@' or whitespace
     # @maine\.edu: Matches the literal characters: @maine.edu
     regex = r"[^@\s]+@maine\.edu"
     if re.fullmatch(regex, email, re.IGNORECASE):
@@ -209,14 +209,39 @@ class DatabaseManager:
         self, expires: datetime, filepath: str, mimetype: str
     ) -> int | None:
         # sanity check if date is earlier than current date
-        if expires <= datetime.now():
+        if expires < datetime.now():
             return None
         async with self.conn.execute(
             "INSERT INTO pictures (expires, filepath, mimetype) VALUES (?, ?, ?)",
-            (expires, datetime, mimetype),
+            (expires, filepath, mimetype),
         ) as cursor:
             picture_id = cursor.lastrowid
             await self.conn.commit()
             return picture_id
 
-    
+    async def get_picture_by_id(self, picture_id: int) -> Picture | None:
+        async with self.conn.execute(
+            "SELECT * FROM pictures WHERE picture_id = ?", (picture_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row is None:
+                return None
+            row = dict(row)
+            return unpack_picture_from_row(row)
+
+    # deletes picture from database (NOT on disk), do not call directly
+    async def _delete_picture(self, picture_id: int):
+        await self.conn.execute(
+            "DELETE FROM pictures WHERE picture_id = ?", (picture_id,)
+        )
+        await self.conn.commit()
+
+    async def safe_delete_picture(self, picture_id) -> bool:
+        # Does a sanity check to make sure the picture is expired
+        picture = await self.get_picture_by_id(picture_id)
+        if picture is None:
+            return False
+        if picture.expires >= datetime.now():
+            return False
+        await self._delete_picture(picture_id)
+        return True

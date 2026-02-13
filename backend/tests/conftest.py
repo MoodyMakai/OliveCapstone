@@ -7,11 +7,11 @@ from src.database import DatabaseManager
 @pytest.fixture(name="test_app", scope="function")
 async def fixture_test_app():
     # Configure to use an in memory database
-    test_db_name = ":memory:"
-    app.config["DB_PATH"] = test_db_name
+    app.config["DB_PATH"] = ":memory:"
 
     async with app.test_app() as test_client:
         yield test_client
+    await app.shutdown()
 
 
 @pytest.fixture(name="client")
