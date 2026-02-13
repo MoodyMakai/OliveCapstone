@@ -102,11 +102,44 @@ class DatabaseManager:
             await self.conn.close()
 
     async def init_tables(self):
-        schema_path = Path(__file__).parent / "schema.sql"
-        if not self.conn:
-            return
-        async with await open_file(schema_path) as f:
-            await self.conn.executescript(f.read())
+        queries = [
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                verified INTEGER,
+                banned INTEGER
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS pictures (
+                picture_id INTEGER PRIMARY KEY,
+                expires TEXT NOT NULL,
+                data BLOB NOT NULL
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS foodshares (
+                foodshare_id INTEGER PRIMARY KEY,
+                creator_id INTEGER REFERENCES users(user_id),
+                location TEXT,
+                picture_fk_id INTEGER REFERENCES pictures(picture_id),
+                end_date TEXT NOT NULL,
+                active INTEGER
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS surveys (
+                survey_id INTEGER PRIMARY KEY,
+                foodshare_fk_id INTEGER REFERENCES foodshares(foodshare_id),
+                num_participants INTEGER,
+                experience INTEGER,
+                other_thoughts TEXT
+            );
+            """,
+        ]
+        for query in queries:
+            await self.conn.execute(query)
         await self.conn.commit()
 
     # User functions
@@ -115,28 +148,30 @@ class DatabaseManager:
         if not validate_email_format(email):
             return False
         await self.conn.execute(
-            "INSERT INTO users (email, verified, banned) VALUES (?, 0, 0)"
+            "INSERT INTO users (email, verified, banned) VALUES (?, 0, 0)", (email,)
         )
         await self.conn.commit()
         return True
 
     async def get_user_by_id(self, user_id: int) -> User | None:
         async with self.conn.execute(
-            "SELECT * FROM users WHERE users.user_id = ?", user_id
+            "SELECT * FROM users WHERE user_id = ?", (user_id,)
         ) as cursor:
             row = await cursor.fetchone()
-            if not isinstance(row, dict):
+            if row is None:
                 return None
+            row = dict(row)
             return unpack_user_from_row(row)
 
     async def get_user_by_email(self, email: str) -> User | None:
-        cursor = await self.conn.execute("SELECT * FROM users WHERE email = ?", email)
-        row = await cursor.fetchone()
-        if row is None:
-            return None
-        if not isinstance(row, dict):
-            return None
-        return unpack_user_from_row(row)
+        async with self.conn.execute(
+            "SELECT * FROM users WHERE email = ?", (email,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row is None:
+                return None
+            row = dict(row)
+            return unpack_user_from_row(row)
 
     async def update_user_verification(self, user_id: int, new_status: bool):
         new_verification = 1 if new_status else 0
