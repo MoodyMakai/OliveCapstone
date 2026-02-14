@@ -148,6 +148,19 @@ class DatabaseManager:
             row = dict(row)
             return unpack_picture_from_row(row)
 
+    async def get_expired_pictures(self) -> list[PictureMetadata]:
+        async with self.conn.execute(
+            "SELECT * FROM pictures WHERE expires > ?", (datetime.now().isoformat(),)
+        ) as cursor:
+            rows = await cursor.fetchall()
+            picture_list = []
+            for row in rows:
+                if row is None:
+                    continue
+                picture_dict = dict(row)
+                picture_list.append(unpack_picture_from_row(picture_dict))
+            return picture_list
+
     # deletes picture from database (NOT on disk), do not call directly
     async def delete_picture_metadata(self, picture_id: int):
         await self.conn.execute(
