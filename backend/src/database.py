@@ -208,9 +208,6 @@ class DatabaseManager:
     async def add_picture_metadata(
         self, expires: datetime, filepath: str, mimetype: str
     ) -> int | None:
-        # sanity check if date is earlier than current date
-        if expires < datetime.now():
-            return None
         async with self.conn.execute(
             "INSERT INTO pictures (expires, filepath, mimetype) VALUES (?, ?, ?)",
             (expires, filepath, mimetype),
