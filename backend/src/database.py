@@ -14,7 +14,7 @@ class User:
 
 
 @dataclass
-class Picture:
+class PictureMetadata:
     picture_id: int
     expires: datetime
     filepath: str
@@ -28,7 +28,7 @@ class Foodshare:
     end_date: str
     active: bool
     user: User | None = None
-    picture: Picture | None = None
+    picture: PictureMetadata | None = None
 
 
 @dataclass
@@ -60,7 +60,7 @@ def unpack_user_from_row(row: dict) -> User | None:
     )
 
 
-def unpack_picture_from_row(row: dict) -> Picture | None:
+def unpack_picture_from_row(row: dict) -> PictureMetadata | None:
     if row is None:
         return None
     picture_id = row.get("picture_id")
@@ -69,7 +69,7 @@ def unpack_picture_from_row(row: dict) -> Picture | None:
     mimetype = row.get("mimetype")
     if picture_id is None or expires is None or filepath is None or mimetype is None:
         return None
-    return Picture(
+    return PictureMetadata(
         picture_id=int(picture_id),
         expires=datetime.fromisoformat(expires),
         filepath=str(filepath),
@@ -116,7 +116,7 @@ class DatabaseManager:
             );
             """,
             """
-            CREATE TABLE IF NOT EXISTS pictures (
+            CREATE TABLE IF NOT EXISTS picture (
                 picture_id INTEGER PRIMARY KEY,
                 expires TEXT NOT NULL,
                 filepath TEXT NOT NULL,
@@ -205,7 +205,7 @@ class DatabaseManager:
 
     # Picture functions
 
-    async def add_picture(
+    async def add_picture_metadata(
         self, expires: datetime, filepath: str, mimetype: str
     ) -> int | None:
         # sanity check if date is earlier than current date
@@ -219,7 +219,9 @@ class DatabaseManager:
             await self.conn.commit()
             return picture_id
 
-    async def get_picture_by_id(self, picture_id: int) -> Picture | None:
+    async def get_picture_metadata_by_id(
+        self, picture_id: int
+    ) -> PictureMetadata | None:
         async with self.conn.execute(
             "SELECT * FROM pictures WHERE picture_id = ?", (picture_id,)
         ) as cursor:
@@ -230,18 +232,8 @@ class DatabaseManager:
             return unpack_picture_from_row(row)
 
     # deletes picture from database (NOT on disk), do not call directly
-    async def _delete_picture(self, picture_id: int):
+    async def delete_picture_metadata(self, picture_id: int):
         await self.conn.execute(
             "DELETE FROM pictures WHERE picture_id = ?", (picture_id,)
         )
         await self.conn.commit()
-
-    async def safe_delete_picture(self, picture_id) -> bool:
-        # Does a sanity check to make sure the picture is expired
-        picture = await self.get_picture_by_id(picture_id)
-        if picture is None:
-            return False
-        if picture.expires >= datetime.now():
-            return False
-        await self._delete_picture(picture_id)
-        return True
