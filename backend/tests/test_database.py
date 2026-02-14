@@ -1,5 +1,3 @@
-from sqlite3.dbapi2 import DatabaseError
-
 import pytest
 
 from src.database import DatabaseManager

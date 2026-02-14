@@ -2,7 +2,6 @@ import re
 from dataclasses import dataclass
 
 import aiosqlite
-from anyio import Path, open_file
 
 
 @dataclass
