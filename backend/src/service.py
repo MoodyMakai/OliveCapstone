@@ -2,7 +2,7 @@ from datetime import datetime
 
 from _typeshed import ReadableBuffer
 
-from src.database import DatabaseManager, PictureMetadata
+from src.database import DatabaseManager
 from src.storage import LocalFileStorage
 
 
