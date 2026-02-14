@@ -1,6 +1,5 @@
 from src.database import (
     User,
-    unpack_picture_from_row,
     unpack_user_from_row,
     validate_email_format,
 )
