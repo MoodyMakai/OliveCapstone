@@ -1,4 +1,4 @@
-from src.database import (
+from src.database_helpers import (
     User,
     unpack_user_from_row,
     validate_email_format,

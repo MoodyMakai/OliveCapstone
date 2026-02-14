@@ -46,8 +46,7 @@ async def test_get_user_by_id(db_manager: DatabaseManager):
 async def test_get_user_by_email(db_manager: DatabaseManager):
     # Create the users
     emails = ["first.last@maine.edu", "f.last@maine.edu", "john.doe@maine.edu"]
-    await fill_users_table(db_manager, emails)
-    await db_manager.add_user("bad@email.com")  # add a bad email
+    await fill_users_table(db_manager, emails)  # add a bad email
 
     # test that the good users are there
     for email in emails:
@@ -57,8 +56,6 @@ async def test_get_user_by_email(db_manager: DatabaseManager):
         assert user.email == email
         assert not user.verified
         assert not user.banned
-    bad_user = await db_manager.get_user_by_email("bad@email.com")
-    assert bad_user is None
 
 
 @pytest.mark.asyncio

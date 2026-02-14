@@ -3,6 +3,7 @@ from datetime import datetime
 from _typeshed import ReadableBuffer
 
 from src.database import DatabaseManager
+from src.database_helpers import validate_email_format
 from src.storage import LocalFileStorage
 
 
@@ -32,3 +33,7 @@ class StorageService:
 
         await self.storage.delete(picture.filepath)
         return True
+
+    async def create_user(self, email) -> int | None:
+        if not validate_email_format(email):
+            return None
