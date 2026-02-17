@@ -2,6 +2,8 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 
+import aiosqlite
+
 
 @dataclass
 class User:
@@ -23,9 +25,9 @@ class PictureMetadata:
 class Foodshare:
     foodshare_id: int
     location: str
-    end_date: str
+    ends: datetime
     active: bool
-    user: User | None = None
+    creator: User | None = None
     picture: PictureMetadata | None = None
 
 
@@ -49,15 +51,11 @@ def validate_email_format(email: str) -> bool:
         return False
 
 
-def unpack_user_from_row(row: dict) -> User | None:
-    if row is None:
-        return None
-    user_id = row.get("user_id")
-    email = row.get("email")
-    verified = row.get("verified")
-    banned = row.get("banned")
-    if user_id is None or email is None or verified is None or banned is None:
-        return None
+def unpack_user_from_row(row: aiosqlite.Row) -> User:
+    user_id = row["user_id"]
+    email = row["email"]
+    verified = row["verified"]
+    banned = row["banned"]
     return User(
         user_id=int(user_id),
         email=str(email),
@@ -66,18 +64,39 @@ def unpack_user_from_row(row: dict) -> User | None:
     )
 
 
-def unpack_picture_from_row(row: dict) -> PictureMetadata | None:
-    if row is None:
-        return None
-    picture_id = row.get("picture_id")
-    expires = row.get("expires")
-    filepath = row.get("filepath")
-    mimetype = row.get("mimetype")
-    if picture_id is None or expires is None or filepath is None or mimetype is None:
-        return None
+def unpack_picture_from_row(row: aiosqlite.Row) -> PictureMetadata:
+    picture_id = row["picture_id"]
+    expires = row["expires"]
+    filepath = row["filepath"]
+    mimetype = row["mimetype"]
     return PictureMetadata(
         picture_id=int(picture_id),
         expires=datetime.fromisoformat(expires),
         filepath=str(filepath),
         mimetype=str(mimetype),
     )
+
+
+def unpack_foodshare_from_row(row: aiosqlite.Row) -> Foodshare | None:
+    # unpack user
+    user_id = int(row["user_id"])
+    email = row["email"]
+    verified = bool(row["verified"])
+    banned = bool(row["banned"])
+
+    # unpack picture
+    picture_id = int(row["picture_id"])
+    expires = datetime.fromisoformat(row["datetime"])
+    filepath = row["filepath"]
+    mimetype = row["mimetype"]
+
+    # unpack foodshare
+    foodshare_id = int(row["foodshare_id"])
+    location = row["location"]
+    ends = datetime.fromisoformat(row["ends"])
+    active = bool(row["active"])
+
+    # pack and return Foodshare
+    user = User(user_id, email, verified, banned)
+    picture_metadata = PictureMetadata(picture_id, expires, filepath, mimetype)
+    return Foodshare(foodshare_id, location, ends, active, user, picture_metadata)
