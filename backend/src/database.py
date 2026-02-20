@@ -13,7 +13,7 @@ from src.database_helpers import (
 class DatabaseManager:
     def __init__(self, db_path: str) -> None:
         self.db_path: str = db_path
-
+    
     async def connect(self):
         # Connect to the database
         self.conn = await aiosqlite.connect(self.db_path)
@@ -278,6 +278,8 @@ class DatabaseManager:
 
         return active_foodshares
 
+    # Survey CRUD
+
     async def add_survey(
         self,
         num_participants: int,
@@ -316,3 +318,15 @@ class DatabaseManager:
                 foodshare=foodshare,
             )
         return None
+
+    async def get_all_surveys(self) -> list["Survey"]:
+        query = "SELECT survey_id FROM surveys"
+        async with self.conn.execute(query) as cursor:
+            rows = await cursor.fetchall()
+
+        surveys = []
+        for row in rows:
+            survey = await self.get_survey(row["survey_id"])
+            if survey:
+                surveys.append(survey)
+        return surveys

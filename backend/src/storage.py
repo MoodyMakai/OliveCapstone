@@ -1,8 +1,8 @@
 import os
 import uuid
+from collections.abc import Buffer
 
 import aiofiles
-from _typeshed import ReadableBuffer
 from anyio import Path
 
 
@@ -11,7 +11,7 @@ class LocalFileStorage:
         self.upload_folder = upload_folder
         os.makedirs(self.upload_folder, exist_ok=True)
 
-    async def save(self, file_stream: ReadableBuffer, extension: str) -> str:
+    async def save(self, file_stream: Buffer, extension: str) -> str:
         filename = f"{uuid.uuid4()}.{extension}"
         filepath = os.path.join(self.upload_folder, filename)
 

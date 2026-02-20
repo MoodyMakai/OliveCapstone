@@ -18,8 +18,7 @@ async def test_add_user(db_manager: DatabaseManager):
     email = "first.last@maine.edu"
     await db_manager.add_user(email)
     user = await db_manager.get_user_by_email(email)
-    if user is None:
-        pytest.fail()
+    assert user
     assert user.email == email
     assert not user.verified
     assert not user.banned
@@ -31,11 +30,9 @@ async def test_get_user(db_manager: DatabaseManager):
     user_ids = await fill_users_table(db_manager, emails)
 
     for uid in user_ids:
-        if uid is None:
-            pytest.fail()
+        assert uid
         user = await db_manager.get_user(uid)
-        if user is None:
-            pytest.fail()
+        assert user
         assert user.email == emails[uid - 1]
         assert not user.verified
         assert not user.banned
@@ -48,8 +45,7 @@ async def test_get_user_by_email(db_manager: DatabaseManager):
 
     for email in emails:
         user = await db_manager.get_user_by_email(email)
-        if user is None:
-            pytest.fail()
+        assert user
         assert user.email == email
         assert not user.verified
         assert not user.banned
@@ -60,14 +56,24 @@ async def test_update_status(db_manager: DatabaseManager):
     emails = ["first.last@maine.edu", "f.last@maine.edu", "john.doe@maine.edu"]
     user_ids = await fill_users_table(db_manager, emails)
     for uid in user_ids:
-        if uid is None:
-            pytest.fail()
+        assert uid
         await db_manager.update_user_status(uid, True, None)
+    for uid in user_ids:
+        assert uid
+        user = await db_manager.get_user(uid)
+        assert user
+        assert user.verified
+        assert not user.banned
+    for uid in user_ids:
+        assert uid
+        await db_manager.update_user_status(uid, None, True)
     for uid in user_ids:
         if uid is None:
             pytest.fail()
-        verification = await db_manager.get_user(uid)
-        assert verification
+        user = await db_manager.get_user(uid)
+        assert user
+        assert user.verified
+        assert user.banned
 
 
 @pytest.mark.asyncio
