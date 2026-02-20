@@ -26,15 +26,14 @@ async def test_add_user(db_manager: DatabaseManager):
 
 
 @pytest.mark.asyncio
-async def test_get_user_by_id(db_manager: DatabaseManager):
+async def test_get_user(db_manager: DatabaseManager):
     emails = ["first.last@maine.edu", "f.last@maine.edu", "john.doe@maine.edu"]
     user_ids = await fill_users_table(db_manager, emails)
 
-    # test that the good users are there
     for uid in user_ids:
         if uid is None:
             pytest.fail()
-        user = await db_manager.get_user_by_id(uid)
+        user = await db_manager.get_user(uid)
         if user is None:
             pytest.fail()
         assert user.email == emails[uid - 1]
@@ -44,11 +43,9 @@ async def test_get_user_by_id(db_manager: DatabaseManager):
 
 @pytest.mark.asyncio
 async def test_get_user_by_email(db_manager: DatabaseManager):
-    # Create the users
     emails = ["first.last@maine.edu", "f.last@maine.edu", "john.doe@maine.edu"]
-    await fill_users_table(db_manager, emails)  # add a bad email
+    await fill_users_table(db_manager, emails)
 
-    # test that the good users are there
     for email in emails:
         user = await db_manager.get_user_by_email(email)
         if user is None:
@@ -59,32 +56,17 @@ async def test_get_user_by_email(db_manager: DatabaseManager):
 
 
 @pytest.mark.asyncio
-async def test_update_verification(db_manager: DatabaseManager):
+async def test_update_status(db_manager: DatabaseManager):
     emails = ["first.last@maine.edu", "f.last@maine.edu", "john.doe@maine.edu"]
     user_ids = await fill_users_table(db_manager, emails)
     for uid in user_ids:
         if uid is None:
             pytest.fail()
-        await db_manager.update_user_verification(uid, True)
+        await db_manager.update_user_status(uid, True, None)
     for uid in user_ids:
         if uid is None:
             pytest.fail()
-        verification = await db_manager.get_user_by_id(uid)
-        assert verification
-
-
-@pytest.mark.asyncio
-async def test_update_ban(db_manager: DatabaseManager):
-    emails = ["first.last@maine.edu", "f.last@maine.edu", "john.doe@maine.edu"]
-    user_ids = await fill_users_table(db_manager, emails)
-    for uid in user_ids:
-        if uid is None:
-            pytest.fail()
-        await db_manager.update_user_ban(uid, True)
-    for uid in user_ids:
-        if uid is None:
-            pytest.fail()
-        verification = await db_manager.get_user_by_id(uid)
+        verification = await db_manager.get_user(uid)
         assert verification
 
 
@@ -93,6 +75,6 @@ async def test_delete_user(db_manager: DatabaseManager):
     emails = ["first.last@maine.edu", "f.last@maine.edu", "john.doe@maine.edu"]
     await fill_users_table(db_manager, emails)
     await db_manager.delete_user_by_id(1)
-    assert await db_manager.get_user_by_id(2)
-    assert await db_manager.get_user_by_id(3)
-    assert not await db_manager.get_user_by_id(1)
+    assert await db_manager.get_user(2)
+    assert await db_manager.get_user(3)
+    assert not await db_manager.get_user(1)

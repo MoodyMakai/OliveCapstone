@@ -7,7 +7,6 @@ from src.database_helpers import (
     PictureMetadata,
     Survey,
     User,
-    validate_email_format,
 )
 
 
@@ -128,7 +127,7 @@ class DatabaseManager:
         return None
 
     async def update_user_status(
-        self, user_id: int, verified: bool, banned: bool
+        self, user_id: int, verified: bool | None = None, banned: bool | None = None
     ) -> None:
         updates = []
         params = []
