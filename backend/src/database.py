@@ -3,10 +3,11 @@ from datetime import datetime
 import aiosqlite
 
 from src.database_helpers import (
+    Foodshare,
     PictureMetadata,
     User,
     unpack_picture_from_row,
-    unpack_user_from_row,
+    validate_email_format,
 )
 
 
@@ -38,7 +39,7 @@ class DatabaseManager:
             );
             """,
             """
-            CREATE TABLE IF NOT EXISTS picture (
+            CREATE TABLE IF NOT EXISTS pictures (
                 picture_id INTEGER PRIMARY KEY,
                 expires TEXT NOT NULL,
                 filepath TEXT NOT NULL,
@@ -48,11 +49,27 @@ class DatabaseManager:
             """
             CREATE TABLE IF NOT EXISTS foodshares (
                 foodshare_id INTEGER PRIMARY KEY,
+                name TEXT,
                 location TEXT,
-                end_date TEXT NOT NULL,
+                ends TEXT NOT NULL,
                 active INTEGER,
-                creator_id INTEGER REFERENCES users(user_id),
+                user_fk_id INTEGER REFERENCES users(user_id),
                 picture_fk_id INTEGER REFERENCES pictures(picture_id)
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS restrictions (
+                restriction_id INTEGER PRIMARY KEY,
+                label TEXT NOT NULL
+            );
+            """,
+            """
+            CREATE TABLE foodshare_restrictions (
+                foodshare_id INTEGER,
+                restriction_id INTEGER,
+                FOREIGN KEY(foodshare_id) REFERENCES foodshares(foodshare_id),
+                FOREIGN KEY(restriction_id) REFERENCES restrictions(restriction_id),
+                PRIMARY KEY (foodshare_id, restriction_id)
             );
             """,
             """
@@ -74,49 +91,62 @@ class DatabaseManager:
     async def add_user(
         self, email: str, verified: bool = False, banned: bool = False
     ) -> int | None:
+        if not validate_email_format(email):
+            return None
+        query = """
+            INSERT INTO users (email, verified, banned)
+            VALUES (?, ?, ?)
+        """
+        cursor = await self.conn.execute(query, (email, int(verified), int(banned)))
+        await self.conn.commit()
+        return cursor.lastrowid
 
-        async with self.conn.execute(
-            "INSERT INTO users (email, verified, banned) VALUES (?, ?, ?)",
-            (email, int(verified), int(banned)),
-        ) as cursor:
-            user_id = cursor.lastrowid
-            await self.conn.commit()
-            return user_id
-
-    async def get_user_by_id(self, user_id: int) -> User | None:
-        async with self.conn.execute(
-            "SELECT * FROM users WHERE user_id = ?", (user_id,)
-        ) as cursor:
+    async def get_user(self, user_id: int) -> User | None:
+        query = "SELECT * FROM users WHERE user_id = ?"
+        async with self.conn.execute(query, (user_id,)) as cursor:
             row = await cursor.fetchone()
-            if row is None:
-                return None
-            row = dict(row)
-            return unpack_user_from_row(row)
+
+        if row:
+            return User(
+                user_id=row["user_id"],
+                email=row["email"],
+                verified=bool(row["verified"]),
+                banned=bool(row["banned"]),
+            )
+        return None
 
     async def get_user_by_email(self, email: str) -> User | None:
-        async with self.conn.execute(
-            "SELECT * FROM users WHERE email = ?", (email,)
-        ) as cursor:
+        query = "SELECT * FROM users WHERE email = ?"
+        async with self.conn.execute(query, (email,)) as cursor:
             row = await cursor.fetchone()
-            if row is None:
-                return None
-            row = dict(row)
-            return unpack_user_from_row(row)
 
-    async def update_user_verification(self, user_id: int, new_status: bool):
-        new_verification = 1 if new_status else 0
-        await self.conn.execute(
-            "UPDATE users SET verified = ? WHERE user_id = ?",
-            (new_verification, user_id),
-        )
-        await self.conn.commit()
+        if row:
+            return User(
+                user_id=row["user_id"],
+                email=row["email"],
+                verified=bool(row["verified"]),
+                banned=bool(row["banned"]),
+            )
+        return None
 
-    async def update_user_ban(self, user_id: int, new_status: bool):
-        new_ban = 1 if new_status else 0
-        await self.conn.execute(
-            "UPDATE users SET banned = ? WHERE user_id = ?",
-            (new_ban, user_id),
-        )
+    async def update_user_status(
+        self, user_id: int, verified: bool, banned: bool
+    ) -> None:
+        updates = []
+        params = []
+        if verified is not None:
+            updates.append("verified = ?")
+            params.append(int(verified))
+        if banned is not None:
+            updates.append("banned = ?")
+            params.append(int(banned))
+
+        if not updates:
+            return
+
+        query = f"UPDATE users SET {', '.join(updates)} WHERE user_id = ?"
+        params.append(user_id)
+        await self.conn.execute(query, tuple(params))
         await self.conn.commit()
 
     async def delete_user_by_id(self, user_id: int):
@@ -125,28 +155,33 @@ class DatabaseManager:
 
     # Picture functions
 
-    async def add_picture_metadata(
+    async def add_picture(
         self, expires: datetime, filepath: str, mimetype: str
     ) -> int | None:
-        async with self.conn.execute(
-            "INSERT INTO pictures (expires, filepath, mimetype) VALUES (?, ?, ?)",
-            (expires, filepath, mimetype),
-        ) as cursor:
-            picture_id = cursor.lastrowid
-            await self.conn.commit()
-            return picture_id
+        """Inserts picture metadata and returns the ID."""
+        query = """
+            INSERT INTO pictures (expires, filepath, mimetype)
+            VALUES (?, ?, ?)
+        """
+        cursor = await self.conn.execute(
+            query, (expires.isoformat(), filepath, mimetype)
+        )
+        await self.conn.commit()
+        return cursor.lastrowid
 
-    async def get_picture_metadata_by_id(
-        self, picture_id: int
-    ) -> PictureMetadata | None:
-        async with self.conn.execute(
-            "SELECT * FROM pictures WHERE picture_id = ?", (picture_id,)
-        ) as cursor:
+    async def get_picture(self, picture_id: int) -> PictureMetadata | None:
+        query = "SELECT * FROM pictures WHERE picture_id = ?"
+        async with self.conn.execute(query, (picture_id,)) as cursor:
             row = await cursor.fetchone()
-            if row is None:
-                return None
-            row = dict(row)
-            return unpack_picture_from_row(row)
+
+        if row:
+            return PictureMetadata(
+                picture_id=row["picture_id"],
+                expires=datetime.fromisoformat(row["expires"]),
+                filepath=row["filepath"],
+                mimetype=row["mimetype"],
+            )
+        return None
 
     async def get_expired_pictures(self) -> list[PictureMetadata]:
         async with self.conn.execute(
@@ -155,15 +190,80 @@ class DatabaseManager:
             rows = await cursor.fetchall()
             picture_list = []
             for row in rows:
-                if row is None:
-                    continue
-                picture_dict = dict(row)
-                picture_list.append(unpack_picture_from_row(picture_dict))
+                picture_list.append(unpack_picture_from_row(row))
             return picture_list
 
-    # deletes picture from database (NOT on disk), do not call directly
     async def delete_picture_metadata(self, picture_id: int):
         await self.conn.execute(
             "DELETE FROM pictures WHERE picture_id = ?", (picture_id,)
         )
         await self.conn.commit()
+
+    async def add_foodshare(
+        self,
+        name: str,
+        location: str,
+        ends: datetime,
+        active: bool,
+        user_fk_id: int | None = None,
+        picture_fk_id: int | None = None,
+    ) -> int | None:
+        query = """
+                INSERT INTO foodshares
+                (name, location, ends, active, user_fk_id, picture_fk_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """
+        cursor = await self.conn.execute(
+            query,
+            (name, location, ends.isoformat(), int(active), user_fk_id, picture_fk_id),
+        )
+        await self.conn.commit()
+        return cursor.lastrowid
+
+    async def link_foodshare_restriction(
+        self, foodshare_id: int, restriction_id: int
+    ) -> None:
+        query = """
+        INSERT OR IGNORE INTO foodshare_restrictions
+        (foodshare_id, restriction_id) VALUES (?, ?)
+        """
+        await self.conn.execute(query, (foodshare_id, restriction_id))
+        await self.conn.commit()
+
+    async def get_foodshare(self, foodshare_id: int) -> Foodshare | None:
+        query = "SELECT * FROM foodshares WHERE foodshare_id = ?"
+        async with self.conn.execute(query, (foodshare_id,)) as cursor:
+            fs_row = await cursor.fetchone()
+
+        if not fs_row:
+            return None
+
+        creator = (
+            await self.get_user(fs_row["user_fk_id"]) if fs_row["user_fk_id"] else None
+        )
+        picture = (
+            await self.get_picture(fs_row["picture_fk_id"])
+            if fs_row["picture_fk_id"]
+            else None
+        )
+
+        restrictions_query = """
+            SELECT r.label
+            FROM restrictions r
+            JOIN foodshare_restrictions fr ON r.restriction_id = fr.restriction_id
+            WHERE fr.foodshare_id = ?
+        """
+        async with self.conn.execute(restrictions_query, (foodshare_id,)) as cursor:
+            rest_rows = await cursor.fetchall()
+            restrictions_list = [row["label"] for row in rest_rows]
+
+        return Foodshare(
+            foodshare_id=fs_row["foodshare_id"],
+            name=fs_row["name"],
+            location=fs_row["location"],
+            ends=datetime.fromisoformat(fs_row["ends"]),
+            restrictions=restrictions_list,
+            active=bool(fs_row["active"]),
+            creator=creator,
+            picture=picture,
+        )
