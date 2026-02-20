@@ -63,7 +63,7 @@ class DatabaseManager:
             );
             """,
             """
-            CREATE TABLE foodshare_restrictions (
+            CREATE TABLE IF NOT EXISTS foodshare_restrictions (
                 foodshare_id INTEGER,
                 restriction_id INTEGER,
                 FOREIGN KEY(foodshare_id) REFERENCES foodshares(foodshare_id),

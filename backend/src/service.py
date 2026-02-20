@@ -11,6 +11,9 @@ class StorageService:
         self.db = db
         self.storage = storage
 
+    async def close(self) -> None:
+        await self.db.close()
+
     async def add_picture_with_file(
         self,
         file_stream: Buffer,
