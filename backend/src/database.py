@@ -91,8 +91,6 @@ class DatabaseManager:
     async def add_user(
         self, email: str, verified: bool = False, banned: bool = False
     ) -> int | None:
-        if not validate_email_format(email):
-            return None
         query = """
             INSERT INTO users (email, verified, banned)
             VALUES (?, ?, ?)
