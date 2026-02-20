@@ -13,7 +13,7 @@ from src.database_helpers import (
 class DatabaseManager:
     def __init__(self, db_path: str) -> None:
         self.db_path: str = db_path
-    
+
     async def connect(self):
         # Connect to the database
         self.conn = await aiosqlite.connect(self.db_path)
