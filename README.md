@@ -20,6 +20,7 @@ pip install -r requirements.txt
 This should set up a virtual environment and install the requirements you need.
 
 Commands:
+
 Run the app: `quart --app src.app run`
 
 Test: `pytest`
