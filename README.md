@@ -21,8 +21,11 @@ This should set up a virtual environment and install the requirements you need.
 
 Commands:
 Run the app: `quart --app src.app run`
+
 Test: `pytest`
+
 Lint: `ruff check --fix` to fix automatically (may not fix everything)
+
 Format: `ruff format`
 
 ### Documentation
