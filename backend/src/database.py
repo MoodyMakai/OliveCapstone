@@ -5,8 +5,8 @@ import aiosqlite
 from src.database_helpers import (
     Foodshare,
     PictureMetadata,
+    Survey,
     User,
-    unpack_picture_from_row,
     validate_email_format,
 )
 
@@ -183,21 +183,21 @@ class DatabaseManager:
             )
         return None
 
-    async def get_expired_pictures(self) -> list[PictureMetadata]:
-        async with self.conn.execute(
-            "SELECT * FROM pictures WHERE expires > ?", (datetime.now().isoformat(),)
-        ) as cursor:
+    async def delete_expired_pictures(self) -> list[str]:
+        now_iso = datetime.now().isoformat()
+        select_query = "SELECT filepath FROM pictures WHERE expires < ?"
+        async with self.conn.execute(select_query, (now_iso,)) as cursor:
             rows = await cursor.fetchall()
-            picture_list = []
-            for row in rows:
-                picture_list.append(unpack_picture_from_row(row))
-            return picture_list
+            filepaths_to_delete = [row["filepath"] for row in rows]
 
-    async def delete_picture_metadata(self, picture_id: int):
-        await self.conn.execute(
-            "DELETE FROM pictures WHERE picture_id = ?", (picture_id,)
-        )
-        await self.conn.commit()
+        if filepaths_to_delete:
+            delete_query = "DELETE FROM pictures WHERE expires < ?"
+            await self.conn.execute(delete_query, (now_iso,))
+            await self.conn.commit()
+
+        return filepaths_to_delete
+
+    # Foodshare CRUD
 
     async def add_foodshare(
         self,
@@ -267,3 +267,55 @@ class DatabaseManager:
             creator=creator,
             picture=picture,
         )
+
+    async def get_all_active_foodshares(self) -> list[Foodshare]:
+        query = "SELECT foodshare_id FROM foodshares WHERE active = 1"
+        async with self.conn.execute(query) as cursor:
+            rows = await cursor.fetchall()
+
+        active_foodshares = []
+        for row in rows:
+            foodshare = await self.get_foodshare(row["foodshare_id"])
+            if foodshare:
+                active_foodshares.append(foodshare)
+
+        return active_foodshares
+
+    async def add_survey(
+        self,
+        num_participants: int,
+        experience: int,
+        other_thoughts: str,
+        foodshare_fk_id: int | None = None,
+    ) -> int | None:
+        """Inserts a new survey record."""
+        query = """
+                INSERT INTO surveys
+                (num_participants, experience, other_thoughts, foodshare_fk_id)
+                VALUES (?, ?, ?, ?)
+            """
+        cursor = await self.conn.execute(
+            query, (num_participants, experience, other_thoughts, foodshare_fk_id)
+        )
+        await self.conn.commit()
+        return cursor.lastrowid
+
+    async def get_survey(self, survey_id: int) -> Survey | None:
+        query = "SELECT * FROM surveys WHERE survey_id = ?"
+        async with self.conn.execute(query, (survey_id,)) as cursor:
+            row = await cursor.fetchone()
+
+        if row:
+            foodshare = (
+                await self.get_foodshare(row["foodshare_fk_id"])
+                if row["foodshare_fk_id"]
+                else None
+            )
+            return Survey(
+                survey_id=row["survey_id"],
+                num_participants=row["num_participants"],
+                experience=row["experience"],
+                other_thoughts=row["other_thoughts"],
+                foodshare=foodshare,
+            )
+        return None
