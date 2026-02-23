@@ -14,30 +14,29 @@ struct FoodShareCreationView: View {
     @State private var selectedBuilding: String = ""
     @State private var classroomNumber: String = ""
     @State private var descriptionText: String = ""
-    @State private var foodRestrictions: [String] = []
-    @State private var newRestriction: String = ""
-    @State private var endTime: Date = Date()
     @State private var imageURL: String = ""
-
+    @State private var endTime: Date = Date()
+    
+    // Updated to use the Set of our Enum for type-safety
+    @State private var selectedRestrictions: Set<DietaryRestriction> = []
 
     var body: some View {
         NavigationView {
             Form {
                 Section(header: Text("Basic Info")) {
                     TextField("Foodshare Name", text: $foodshareName)
-
                     TextField("Image URL", text: $imageURL)
                         .keyboardType(.URL)
+                        .autocapitalization(.none)
 
-                    DatePicker("Ends At", selection: $endTime, displayedComponents: .date)
-                    DatePicker("", selection: $endTime, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
+                    DatePicker("Ends At", selection: $endTime)
                 }
 
                 Section(header: Text("Location")) {
                     Picker("Building", selection: $selectedBuilding) {
+                        Text("Select a building").tag("") // Placeholder
                         ForEach(BuildingLocator.shared.allAliases(), id: \.self) { building in
-                            Text(building)
+                            Text(building).tag(building)
                         }
                     }
 
@@ -50,23 +49,19 @@ struct FoodShareCreationView: View {
                         .frame(minHeight: 100)
                 }
 
-                Section(header: Text("Food Restrictions")) {
-                    HStack {
-                        TextField("Add restriction", text: $newRestriction)
-                        Button(action: addRestriction) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title3)
-                        }
-                    }
-
-                    if foodRestrictions.isEmpty {
-                        Text("No restrictions added")
-                            .foregroundColor(.secondary)
-                    } else {
-                        ForEach(foodRestrictions, id: \.self) { r in
-                            Text(r)
-                        }
-                        .onDelete(perform: deleteRestrictions)
+                // New logic: Pre-defined toggle list to prevent typos
+                Section(header: Text("Dietary Restrictions")) {
+                    ForEach(DietaryRestriction.allCases) { restriction in
+                        Toggle(restriction.rawValue, isOn: Binding(
+                            get: { selectedRestrictions.contains(restriction) },
+                            set: { isSelected in
+                                if isSelected {
+                                    selectedRestrictions.insert(restriction)
+                                } else {
+                                    selectedRestrictions.remove(restriction)
+                                }
+                            }
+                        ))
                     }
                 }
 
@@ -79,38 +74,34 @@ struct FoodShareCreationView: View {
                             Spacer()
                         }
                     }
+                    .disabled(foodshareName.isEmpty || selectedBuilding.isEmpty)
                 }
             }
             .navigationTitle("New Foodshare")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
         }
-    }
-
-
-    private func addRestriction() {
-        let trimmed = newRestriction.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        foodRestrictions.append(trimmed)
-        newRestriction = ""
-    }
-
-    private func deleteRestrictions(at offsets: IndexSet) {
-        foodRestrictions.remove(atOffsets: offsets)
     }
 
     private func saveFoodshare() {
-            let item = FoodshareItem(
-                name: foodshareName,
-                endTime: endTime,
-                description: descriptionText,
-                foodRestrictions: foodRestrictions,
-                imageURL: imageURL,
-                building: selectedBuilding,
-                classRoomNumber: classroomNumber
-            )
+        let restrictionsArray = selectedRestrictions.map { $0.rawValue }
 
-            store.add(item)   // updates list automatically
-            dismiss()         // closes the sheet
-        }
+        let item = FoodshareItem(
+            name: foodshareName,
+            endTime: endTime,
+            description: descriptionText,
+            foodRestrictions: restrictionsArray,
+            imageURL: imageURL,
+            building: selectedBuilding,
+            classRoomNumber: classroomNumber
+        )
+
+        store.add(item)
+        dismiss()
+    }
 }
 
 #Preview {
