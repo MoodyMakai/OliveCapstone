@@ -1,7 +1,7 @@
 import pytest
 
 import src.tokens as tokens
-from src.database import validate_email_format
+from src.database_helpers import validate_email_format
 
 # Test emails add or remove as you would like, this shouldn't affect validty of testing.
 # An Full email List, a valid and invalid list for testing emails.

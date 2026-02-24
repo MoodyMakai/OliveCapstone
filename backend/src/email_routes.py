@@ -26,12 +26,9 @@ async def verify_user_email():
     user_info = await app.storage.get_user_by_email(email)
     if not user_info:
         return jsonify({"error": "user not found"}), 404
-    # Gets specific field of row.
-    verified = user_info.verified
-    user_identifier = user_info.user_id
     # Error code 200 is completed / success
-    if verified:
+    if user_info.verified:
         return jsonify({"message": "email already verified."}), 200
     # Update the correct user verification to True
-    await app.db.update_user_verification(user_identifier, True)
+    await app.storage.update_user_verification(user_info.user_id, True)
     return jsonify({"message": "email has been successfully verified"}), 200
