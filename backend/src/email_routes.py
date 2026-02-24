@@ -21,7 +21,7 @@ async def verify_user_email():
         return jsonify({"error": "token has expired or is invalid"}), 404
 
     # Get the User row from the database
-    user_info = await app.storage.get_user(email)
+    user_info = await app.storage.get_user(email=email)
     if not user_info:
         return jsonify({"error": "user not found"}), 404
     # Error code 200 is completed / success
