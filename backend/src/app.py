@@ -1,6 +1,9 @@
 from quart import Quart
 
 from src.database import DatabaseManager
+
+# Blueprint for email token verification
+from src.email_routes import verification_bp
 from src.service import StorageService
 from src.storage import LocalFileStorage
 
@@ -13,6 +16,8 @@ class QuartApp(Quart):
 
 app = QuartApp(__name__)
 app.config["DB_PATH"] = "database.sqlite"
+# Registers the blueprint for email Verification links
+app.register_blueprint(verification_bp, url_prefix="/verify")
 
 
 @app.route("/")

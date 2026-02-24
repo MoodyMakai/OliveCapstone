@@ -146,6 +146,7 @@ class DatabaseManager:
         await self.conn.execute(query, tuple(params))
         await self.conn.commit()
 
+    # aiosqlite is expecting a tuple, but is recieving an int
     async def delete_user_by_id(self, user_id: int):
         await self.conn.execute("DELETE FROM users where user_id = ?", (user_id,))
         await self.conn.commit()
