@@ -1,11 +1,11 @@
 from quart import Quart
 
 from src.database import DatabaseManager
-from src.service import StorageService
-from src.storage import LocalFileStorage
 
 # Blueprint for email token verification
 from src.email_routes import verification_bp
+from src.service import StorageService
+from src.storage import LocalFileStorage
 
 
 class QuartApp(Quart):

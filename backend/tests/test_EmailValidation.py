@@ -64,11 +64,14 @@ def test_email_verification_entire():
     for email in EMAILS:
         result = validate_email_format(email)
         if not result:
-            continue  # If the Email is not umaine, no need to validate token
+            continue
+        # If the Email is not umaine, no need to validate token
         else:
             token = tokens.generate_verification_token(email)
             verified_email = tokens.verify_verification_token(token)
             # Tests for empty token, token is string, and the verified email is same.
             assert token is not None, f"{token} broke the token generator"
+
             assert isinstance(token, str), f"{token} isn't a string"
+
             assert verified_email == email, f"{token} failed verification"
