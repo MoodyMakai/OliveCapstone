@@ -1,4 +1,4 @@
-from database import validate_email_format
+from database_helpers import validate_email_format
 from tokens import generate_verification_token
 
 # Web link for validation
