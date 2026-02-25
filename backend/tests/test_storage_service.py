@@ -24,7 +24,7 @@ async def test_user_registration(storage_service: StorageService):
 
 
 @pytest.mark.asyncio
-async def test_storage_service_saves_file_and_metadata(storage_service):
+async def test_storage_service_saves_file_and_metadata(storage_service: StorageService):
     dummy_file_stream = b"fake image data"
     expires = datetime.now() + timedelta(days=1)
 
