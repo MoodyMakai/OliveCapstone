@@ -38,6 +38,15 @@ class DatabaseManager:
             );
             """,
             """
+            CREATE TABLE IF NOT EXISTS device_tokens (
+                token_hash TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+            """,
+            """
             CREATE TABLE IF NOT EXISTS pictures (
                 picture_id INTEGER PRIMARY KEY,
                 expires TEXT NOT NULL,
@@ -126,6 +135,24 @@ class DatabaseManager:
             )
         return None
 
+    async def get_user_by_token(self, token: str) -> User | None:
+        query = """
+        SELECT u.user_id, u.email, u.verified, u.banned
+        FROM device_tokens t, users u
+        JOIN users u ON u.user_id = t.user_id
+        WHERE t.token_hash = ?
+        """
+        async with self.conn.execute(query, (token,)) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                return User(
+                    user_id=row["user_id"],
+                    email=row["email"],
+                    verified=bool(row["verified"]),
+                    banned=bool(row["banned"]),
+                )
+            return None
+
     async def update_user_status(
         self, user_id: int, verified: bool | None = None, banned: bool | None = None
     ) -> None:
@@ -155,7 +182,6 @@ class DatabaseManager:
     async def add_picture(
         self, expires: datetime, filepath: str, mimetype: str
     ) -> int | None:
-        """Inserts picture metadata and returns the ID."""
         query = """
             INSERT INTO pictures (expires, filepath, mimetype)
             VALUES (?, ?, ?)
