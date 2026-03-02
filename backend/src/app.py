@@ -71,17 +71,22 @@ async def add_foodshare():
         location = form.get("location")
         ends = datetime.fromisoformat(str(form.get("ends")))
         active = form.get("active", "true").lower() == "true"
-        user_id = int(form.get("user_id"))  # pyright: ignore[reportArgumentType]
+        user_id = form.get("user_id")
+        if user_id is None:
+            raise TypeError
+        else:
+            user_id = int(user_id)
 
         picture_expires = datetime.fromisoformat(str(form.get("picture_expires")))
         extension = (
             picture.filename.split(".")[-1] if "." in picture.filename else "bin"
         )
         mimetype = picture.mimetype
-
+        if name is None or location is None:
+            raise TypeError
         foodshare_id = await app.storage.create_foodshare_with_picture(
-            name=name,  # pyright: ignore[reportArgumentType]
-            location=location,  # pyright: ignore[reportArgumentType]
+            name=name,
+            location=location,
             ends=ends,
             active=active,
             user_id=user_id,
