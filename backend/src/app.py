@@ -1,3 +1,5 @@
+from dataclasses import asdict
+
 from quart import Quart, request
 from quart.json import jsonify
 
@@ -45,6 +47,13 @@ async def create_user(email):
         if "UNIQUE" in str(e):
             return jsonify({"error": "A user with that email already exists."}), 400
         return jsonify({"error": "Internal server error."}), 500
+
+
+@app.route("/foodshares", methods=["GET"])
+async def get_all_active_foodshares():
+    foodshares = await app.storage.list_active_foodshares()
+    foodshares = [asdict(f) for f in foodshares]
+    return jsonify(foodshares)
 
 
 # runs before startup
