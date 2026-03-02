@@ -1,4 +1,5 @@
-from quart import Quart
+from quart import Quart, request
+from quart.json import jsonify
 
 from src.database import DatabaseManager
 from src.service import StorageService
@@ -18,6 +19,27 @@ app.config["DB_PATH"] = "database.sqlite"
 @app.route("/")
 def hello_world():
     return "<p>Black Bear Foodshare</p>"
+
+
+@app.route("/users/<email>", methods=["POST"])
+async def create_user(email):
+    data = await request.get_json()
+    print(data)
+    print(email)
+    if not data or "email" not in data:
+        return jsonify({"error": "An email address is required."}), 400
+
+    try:
+        user_id = await app.storage.register_user(email=data["email"])
+        if user_id is None:
+            return jsonify({"error": "Invalid email address."}), 400
+        return jsonify(
+            {"message": "User successfully created.", "user_id": user_id}
+        ), 201
+    except Exception as e:
+        if "UNIQUE" in str(e):
+            return jsonify({"error": "A user with that email already exists."}), 400
+        return jsonify({"error": "Internal server error."}), 500
 
 
 # runs before startup

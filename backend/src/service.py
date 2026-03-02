@@ -86,12 +86,17 @@ class StorageService:
         return await self.db.add_user(email, False, False)
 
     async def get_user(
-        self, user_id: int | None = None, email: str | None = None
+        self,
+        user_id: int | None = None,
+        email: str | None = None,
+        token: str | None = None,
     ) -> User | None:
         if user_id:
             return await self.db.get_user(user_id)
         elif email:
             return await self.db.get_user_by_email(email)
+        elif token:
+            return await self.db.get_user_by_token(token)
         return None
 
     async def verify_user(self, user_id: int) -> None:

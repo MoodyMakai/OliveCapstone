@@ -356,3 +356,11 @@ class DatabaseManager:
             if survey:
                 surveys.append(survey)
         return surveys
+
+    async def reset_token_lifetime(self, token_hash: str):
+        await self.conn.execute(
+            """UPDATE device_tokens SET last_used = CURRENT_TIMESTAMP
+            WHERE token_hash = ?""",
+            (token_hash,),
+        )
+        await self.conn.commit()

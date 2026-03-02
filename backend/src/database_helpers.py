@@ -1,4 +1,6 @@
+import hashlib
 import re
+import secrets
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -49,3 +51,11 @@ def validate_email_format(email: str) -> bool:
         return True
     else:
         return False
+
+
+def hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def generate_secure_token() -> str:
+    return secrets.token_urlsafe(32)
