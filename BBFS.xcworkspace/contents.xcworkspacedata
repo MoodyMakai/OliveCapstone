@@ -51,6 +51,9 @@
                location = "group:FoodShareCreationView.swift">
             </FileRef>
          </Group>
+         <FileRef
+            location = "group:AppDelegate.swift">
+         </FileRef>
       </Group>
       <Group
          location = "group:BlackBearFoodShareTests"
