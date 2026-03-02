@@ -1,4 +1,5 @@
 from dataclasses import asdict
+from datetime import datetime
 
 from quart import Quart, request
 from quart.json import jsonify
@@ -31,8 +32,6 @@ def hello_world():
 @app.route("/users/<email>", methods=["POST"])
 async def create_user(email):
     data = await request.get_json()
-    print(data)
-    print(email)
     if not data or "email" not in data:
         return jsonify({"error": "An email address is required."}), 400
 
@@ -53,7 +52,51 @@ async def create_user(email):
 async def get_all_active_foodshares():
     foodshares = await app.storage.list_active_foodshares()
     foodshares = [asdict(f) for f in foodshares]
-    return jsonify(foodshares)
+    return jsonify(foodshares), 200
+
+
+@app.route("/foodshares", methods=["POST"])
+async def add_foodshare():
+    form = await request.form
+    files = await request.files
+    if not form or not files:
+        return jsonify({"error": "Missing form data"}), 400
+
+    picture = files.get("picture")
+    if not picture:
+        return jsonify({"error": "Missing picture file"}), 400
+
+    try:
+        name = form.get("name")
+        location = form.get("location")
+        ends = datetime.fromisoformat(str(form.get("ends")))
+        active = form.get("active", "true").lower() == "true"
+        user_id = int(form.get("user_id"))  # pyright: ignore[reportArgumentType]
+
+        picture_expires = datetime.fromisoformat(str(form.get("picture_expires")))
+        extension = (
+            picture.filename.split(".")[-1] if "." in picture.filename else "bin"
+        )
+        mimetype = picture.mimetype
+
+        foodshare_id = await app.storage.create_foodshare_with_picture(
+            name=name,  # pyright: ignore[reportArgumentType]
+            location=location,  # pyright: ignore[reportArgumentType]
+            ends=ends,
+            active=active,
+            user_id=user_id,
+            file_stream=picture.stream,
+            extension=extension,
+            mimetype=mimetype,
+            picture_expires=picture_expires,
+        )
+
+        if foodshare_id:
+            return jsonify({"success": True, "foodshare_id": foodshare_id}), 201
+        return jsonify({"error": "Failed to create foodshare"}), 500
+
+    except (ValueError, TypeError) as e:
+        return jsonify({"error": f"Invalid data format: {str(e)}"}), 400
 
 
 # runs before startup

@@ -1,7 +1,6 @@
 from functools import wraps
 
-import aiosqlite
-from quart import g, jsonify, request
+from quart import jsonify, request
 
 from src.app import app
 from src.database_helpers import hash_token
