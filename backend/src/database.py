@@ -80,6 +80,11 @@ class DatabaseManager:
                 foodshare_fk_id INTEGER REFERENCES foodshares(foodshare_id)
             );
             """,
+            """
+            CREATE TABLE IF NOT EXISTS device_tokens (
+                device_token TEXT NOT NULL UNIQUE
+            );
+            """,
         ]
         for query in queries:
             await self.conn.execute(query)
@@ -331,3 +336,25 @@ class DatabaseManager:
             if survey:
                 surveys.append(survey)
         return surveys
+
+    # Notifications
+
+    async def add_device_tokens(self, device_token: str) -> int | None:
+        query = """
+            INSERT OR IGNORE INTO device_tokens (device_token) VALUES (?)
+        """
+        cursor = await self.conn.execute(query, (device_token,))
+        await self.conn.commit()
+        return cursor.lastrowid
+
+    async def get_all_device_token(self) -> list[str]:
+        query = "SELECT device_token FROM device_tokens"
+        async with self.conn.execute(query) as cursor:
+            rows = await cursor.fetchall()
+        return [row[0] for row in rows]
+
+    async def delete_device_token(self, device_token: str):
+        await self.conn.execute(
+            "DELETE FROM device_tokens where device_token = ?", (device_token,)
+        )
+        await self.conn.commit()
