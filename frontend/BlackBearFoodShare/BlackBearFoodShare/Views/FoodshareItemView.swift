@@ -10,8 +10,15 @@ import SwiftUI
 struct FoodshareItemView: View {
     let item: FoodshareItem
     
-    // 1. ADD THIS: Allows us to open the maps app
+    // creates user auth to check if foodshare is owned/can be deleted
+    var isApprovedUser: Bool
+    //call parent
+    var onDelete: (() -> Void)?
+    
+    @Environment(\.dismiss) var dismiss
     @Environment(\.openURL) var openURL
+    
+    @State private var showDeleteConfirmation = false
     
     private let dateFormatter: DateFormatter = {
         let df = DateFormatter()
@@ -23,6 +30,7 @@ struct FoodshareItemView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                
                 // IMAGE HANDLING
                 AsyncImage(url: URL(string: item.imageURL)) { phase in
                     switch phase {
@@ -32,12 +40,14 @@ struct FoodshareItemView: View {
                             ProgressView()
                         }
                         .frame(maxWidth: .infinity, minHeight: 300)
+                        
                     case .success(let image):
                         image
                             .resizable()
                             .scaledToFill()
                             .frame(maxWidth: .infinity, minHeight: 300)
                             .clipped()
+                        
                     case .failure:
                         ZStack {
                             Color.gray.opacity(0.3)
@@ -46,6 +56,7 @@ struct FoodshareItemView: View {
                                 .foregroundColor(.gray)
                         }
                         .frame(maxWidth: .infinity, minHeight: 300)
+                        
                     @unknown default:
                         EmptyView()
                     }
@@ -79,18 +90,18 @@ struct FoodshareItemView: View {
                     Divider()
 
                     // Location and Time Info
-                    VStack(alignment: .leading, spacing: 10) { // Increased spacing slightly
+                    VStack(alignment: .leading, spacing: 10) {
+                        
                         HStack {
                             Image(systemName: "clock")
-                                .frame(width: 24) // Align icons
+                                .frame(width: 24)
                             Text("Ends at \(dateFormatter.string(from: item.endTime))")
                         }
                         .foregroundColor(.secondary)
                         
-                        // 2. UPDATED LOCATION SECTION
                         HStack {
                             Image(systemName: "building.2")
-                                .frame(width: 24) // Align icons
+                                .frame(width: 24)
                                 .foregroundColor(.secondary)
                             
                             Text("\(item.building), Room \(item.classRoomNumber)")
@@ -98,9 +109,7 @@ struct FoodshareItemView: View {
                             
                             Spacer()
                             
-                            // 3. THE MAP BUTTON
                             Button {
-                                // This now calls the NEW logic (coordinates), but the code here is the same
                                 if let url = BuildingLocator.shared.mapsURL(for: item.building) {
                                     openURL(url)
                                 }
@@ -122,6 +131,36 @@ struct FoodshareItemView: View {
                 }
                 .padding(.horizontal)
                 
+                //MMB
+                // if FoodShare is owned by user deletion option appears
+                if isApprovedUser {
+                    
+                    Divider()
+                        .padding(.horizontal)
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Label("Delete Foodshare", systemImage: "trash")
+                                .font(.headline)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                    }
+                    .alert("Delete this foodshare?", isPresented: $showDeleteConfirmation) {
+                        Button("Delete", role: .destructive) {
+                            onDelete?()
+                            dismiss()
+                        }
+                        Button("Cancel", role: .cancel) { }
+                    }
+                }
+                
                 Spacer()
             }
         }
@@ -132,6 +171,7 @@ struct FoodshareItemView: View {
 // Helper to display tags cleanly
 struct FlowLayoutShim: View {
     let items: [String]
+    
     var body: some View {
         HStack {
             ForEach(items, id: \.self) { restriction in
@@ -150,5 +190,10 @@ struct FlowLayoutShim: View {
 }
 
 #Preview {
-    FoodshareItemView(item: sampleFoodshareItems[0])
+    FoodshareItemView(
+        item: sampleFoodshareItems[0],
+        //add user auth to preview
+        isApprovedUser: true,
+        onDelete: {}
+    )
 }
