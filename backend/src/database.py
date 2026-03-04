@@ -80,6 +80,11 @@ class DatabaseManager:
                 foodshare_fk_id INTEGER REFERENCES foodshares(foodshare_id)
             );
             """,
+            """
+            CREATE TABLE IF NOT EXISTS device_tokens (
+                device_token TEXT NOT NULL
+            );
+            """,
         ]
         for query in queries:
             await self.conn.execute(query)
