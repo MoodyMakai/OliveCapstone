@@ -24,11 +24,6 @@ app.config["DB_PATH"] = "database.sqlite"
 app.register_blueprint(verification_bp, url_prefix="/verify")
 
 
-@app.route("/")
-def hello_world():
-    return "<p>Black Bear Foodshare</p>"
-
-
 @app.route("/users/<email>", methods=["POST"])
 async def create_user(email):
     data = await request.get_json()

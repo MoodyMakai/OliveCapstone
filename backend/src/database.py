@@ -1,9 +1,11 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 import aiosqlite
 
 from src.database_helpers import (
+    DeviceSession,
     Foodshare,
+    OTPRecord,
     PictureMetadata,
     Survey,
     User,
@@ -208,7 +210,7 @@ class DatabaseManager:
         return None
 
     async def delete_expired_pictures(self) -> list[str]:
-        now_iso = datetime.now().isoformat()
+        now_iso = datetime.now(tz=UTC).isoformat()
         select_query = "SELECT filepath FROM pictures WHERE expires < ?"
         async with self.conn.execute(select_query, (now_iso,)) as cursor:
             rows = await cursor.fetchall()
@@ -365,3 +367,84 @@ class DatabaseManager:
             (token_hash,),
         )
         await self.conn.commit()
+
+    async def save_otp(self, otp_record: OTPRecord) -> int | None:
+        cursor = await self.conn.execute(
+            """
+            INSERT INTO otp_codes (email, otp, expires_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(email) DO UPDATE SET
+                otp = excluded.otp,
+                expires_at = excluded.expires_at
+        """,
+            (otp_record.email, otp_record.otp, otp_record.expires_at),
+        )
+        await self.conn.commit()
+        return cursor.lastrowid
+
+    async def get_otp(self, email: str) -> OTPRecord | None:
+        async with self.conn.cursor() as cursor:
+            await cursor.execute(
+                "SELECT email, otp, expires_at FROM otp_codes WHERE email = ?", (email,)
+            )
+            row = await cursor.fetchone()
+            return OTPRecord(**dict(row)) if row else None
+
+    async def delete_otp(self, email: str) -> int | None:
+        async with self.conn.cursor() as cursor:
+            await cursor.execute("DELETE FROM otp_codes WHERE email = ?", (email,))
+            await self.conn.commit()
+            return cursor.lastrowid
+
+    async def create_device_token(self, user_id: int, token_hash: str):
+        async with self.conn.cursor() as cursor:
+            await cursor.execute(
+                "INSERT INTO device_tokens (token_hash, user_id) VALUES (?, ?)",
+                (token_hash, user_id),
+            )
+            await self.conn.commit()
+            return cursor.lastrowid
+
+    async def get_session_by_token(self, token_hash: str) -> DeviceSession | None:
+        """Returns a DeviceSession dataclass to validate the auth token."""
+        async with self.conn.cursor() as cursor:
+            query = """
+                SELECT d.user_id, u.banned
+                FROM device_tokens d
+                JOIN users u ON d.user_id = u.user_id
+                WHERE d.token_hash = ?
+            """
+            await cursor.execute(query, (token_hash,))
+            row = await cursor.fetchone()
+            return DeviceSession(**dict(row)) if row else None
+
+    async def update_token_usage(self, token_hash: str) -> int | None:
+        async with self.conn.cursor() as cursor:
+            await cursor.execute(
+                """
+                UPDATE device_tokens
+                SET last_used = CURRENT_TIMESTAMP WHERE token_hash = ?
+                """,
+                (token_hash,),
+            )
+            await self.conn.commit()
+
+    async def create_or_verify_user(self, email: str) -> int | None:
+        async with self.conn.cursor() as cursor:
+            await cursor.execute("SELECT user_id FROM users WHERE email = ?", (email,))
+            row = await cursor.fetchone()
+
+            if row:
+                await cursor.execute(
+                    "UPDATE users SET verified = 1 WHERE email = ?", (email,)
+                )
+                user_id = row["user_id"]
+            else:
+                await cursor.execute(
+                    "INSERT INTO users (email, verified, banned) VALUES (?, 1, 0)",
+                    (email,),
+                )
+                user_id = cursor.lastrowid
+
+            await self.conn.commit()
+            return user_id

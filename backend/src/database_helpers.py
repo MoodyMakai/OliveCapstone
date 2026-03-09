@@ -14,6 +14,19 @@ class User:
 
 
 @dataclass
+class OTPRecord:
+    email: str
+    otp: str
+    expires_at: str
+
+
+@dataclass
+class DeviceSession:
+    user_id: int
+    banned: int
+
+
+@dataclass
 class PictureMetadata:
     picture_id: int
     expires: datetime
