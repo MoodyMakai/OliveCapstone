@@ -3,9 +3,7 @@ import pytest
 from src.database import DatabaseManager
 
 
-async def fill_users_table(
-    db_manager: DatabaseManager, emails: list
-) -> list[int | None]:
+async def fill_users_table(db_manager: DatabaseManager, emails: list) -> list[int | None]:
     user_ids = []
     for email in emails:
         uid = await db_manager.add_user(email)

@@ -14,9 +14,7 @@ from src.storage import LocalFileStorage
 
 
 class QuartApp(Quart):
-    storage: (
-        StorageService  # Define storage explicitly to stop pyright from complaining
-    )
+    storage: StorageService  # Define storage explicitly to stop pyright from complaining
 
 
 app = QuartApp(__name__)
@@ -33,9 +31,7 @@ async def create_user(email):
         user_id = await app.storage.register_user(email=data["email"])
         if user_id is None:
             return jsonify({"error": "Invalid email address."}), 400
-        return jsonify(
-            {"message": "User successfully created.", "user_id": user_id}
-        ), 201
+        return jsonify({"message": "User successfully created.", "user_id": user_id}), 201
     except Exception as e:
         if "UNIQUE" in str(e):
             return jsonify({"error": "A user with that email already exists."}), 400
@@ -78,11 +74,7 @@ async def add_foodshare():
             return jsonify({"error": "Invalid filename"}), 400
 
         # Extract extension and validate it
-        extension = (
-            picture.filename.split(".")[-1].lower()
-            if "." in picture.filename
-            else "bin"
-        )
+        extension = picture.filename.split(".")[-1].lower() if "." in picture.filename else "bin"
 
         # Whitelist allowed file extensions
         allowed_extensions = {"jpg", "jpeg", "png", "gif"}
@@ -97,9 +89,7 @@ async def add_foodshare():
         # Validate MIME type based on extension
         mime_type, _ = mimetypes.guess_type(picture.filename)
         if not mime_type or not mime_type.startswith("image/"):
-            return jsonify(
-                {"error": "Invalid file type. Please upload an image file."}
-            ), 400
+            return jsonify({"error": "Invalid file type. Please upload an image file."}), 400
 
         # Validate file size (max 10MB)
         picture.stream.seek(0, os.SEEK_END)

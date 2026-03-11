@@ -148,9 +148,7 @@ class StorageService:
             "DELETE FROM foodshare_restrictions WHERE foodshare_id = ?", (foodshare_id,)
         )
 
-        await self.db.conn.execute(
-            "DELETE FROM foodshares WHERE foodshare_id = ?", (foodshare_id,)
-        )
+        await self.db.conn.execute("DELETE FROM foodshares WHERE foodshare_id = ?", (foodshare_id,))
         await self.db.conn.commit()
 
         return True

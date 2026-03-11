@@ -1,6 +1,8 @@
+import importlib.resources
 from datetime import UTC, datetime
 
 import aiosqlite
+import anyio
 
 from src.database_helpers import (
     DeviceSession,
@@ -30,77 +32,19 @@ class DatabaseManager:
             await self.conn.close()
 
     async def init_tables(self):
-        queries = [
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY,
-                email TEXT UNIQUE NOT NULL,
-                verified INTEGER,
-                banned INTEGER
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS device_tokens (
-                token_hash TEXT PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS pictures (
-                picture_id INTEGER PRIMARY KEY,
-                expires TEXT NOT NULL,
-                filepath TEXT NOT NULL,
-                mimetype TEXT NOT NULL
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS foodshares (
-                foodshare_id INTEGER PRIMARY KEY,
-                name TEXT,
-                location TEXT,
-                ends TEXT NOT NULL,
-                active INTEGER,
-                user_fk_id INTEGER REFERENCES users(user_id),
-                picture_fk_id INTEGER REFERENCES pictures(picture_id)
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS restrictions (
-                restriction_id INTEGER PRIMARY KEY,
-                label TEXT NOT NULL
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS foodshare_restrictions (
-                foodshare_id INTEGER,
-                restriction_id INTEGER,
-                FOREIGN KEY(foodshare_id) REFERENCES foodshares(foodshare_id),
-                FOREIGN KEY(restriction_id) REFERENCES restrictions(restriction_id),
-                PRIMARY KEY (foodshare_id, restriction_id)
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS surveys (
-                survey_id INTEGER PRIMARY KEY,
-                num_participants INTEGER,
-                experience INTEGER,
-                other_thoughts TEXT,
-                foodshare_fk_id INTEGER REFERENCES foodshares(foodshare_id)
-            );
-            """,
-        ]
-        for query in queries:
-            await self.conn.execute(query)
+        current_dir = anyio.Path(__file__).parent
+
+        sql_file_path = current_dir / "sql" / "init_tables.sql"
+
+        async with await anyio.open_file(sql_file_path, "r") as sql_file:
+            sql_content = await sql_file.read()
+            await self.conn.executescript(sql_content)
+
         await self.conn.commit()
 
     # User functions
 
-    async def add_user(
-        self, email: str, verified: bool = False, banned: bool = False
-    ) -> int | None:
+    async def add_user(self, email: str, verified: bool = False, banned: bool = False) -> int | None:
         query = """
             INSERT INTO users (email, verified, banned)
             VALUES (?, ?, ?)
@@ -182,16 +126,12 @@ class DatabaseManager:
 
     # Picture functions
 
-    async def add_picture(
-        self, expires: datetime, filepath: str, mimetype: str
-    ) -> int | None:
+    async def add_picture(self, expires: datetime, filepath: str, mimetype: str) -> int | None:
         query = """
             INSERT INTO pictures (expires, filepath, mimetype)
             VALUES (?, ?, ?)
         """
-        cursor = await self.conn.execute(
-            query, (expires.isoformat(), filepath, mimetype)
-        )
+        cursor = await self.conn.execute(query, (expires.isoformat(), filepath, mimetype))
         await self.conn.commit()
         return cursor.lastrowid
 
@@ -246,9 +186,7 @@ class DatabaseManager:
         await self.conn.commit()
         return cursor.lastrowid
 
-    async def link_foodshare_restriction(
-        self, foodshare_id: int, restriction_id: int
-    ) -> None:
+    async def link_foodshare_restriction(self, foodshare_id: int, restriction_id: int) -> None:
         query = """
         INSERT OR IGNORE INTO foodshare_restrictions
         (foodshare_id, restriction_id) VALUES (?, ?)
@@ -264,14 +202,8 @@ class DatabaseManager:
         if not fs_row:
             return None
 
-        creator = (
-            await self.get_user(fs_row["user_fk_id"]) if fs_row["user_fk_id"] else None
-        )
-        picture = (
-            await self.get_picture(fs_row["picture_fk_id"])
-            if fs_row["picture_fk_id"]
-            else None
-        )
+        creator = await self.get_user(fs_row["user_fk_id"]) if fs_row["user_fk_id"] else None
+        picture = await self.get_picture(fs_row["picture_fk_id"]) if fs_row["picture_fk_id"] else None
 
         restrictions_query = """
             SELECT r.label
@@ -335,9 +267,7 @@ class DatabaseManager:
 
         if row:
             foodshare = (
-                await self.get_foodshare(row["foodshare_fk_id"])
-                if row["foodshare_fk_id"]
-                else None
+                await self.get_foodshare(row["foodshare_fk_id"]) if row["foodshare_fk_id"] else None
             )
             return Survey(
                 survey_id=row["survey_id"],
@@ -435,9 +365,7 @@ class DatabaseManager:
             row = await cursor.fetchone()
 
             if row:
-                await cursor.execute(
-                    "UPDATE users SET verified = 1 WHERE email = ?", (email,)
-                )
+                await cursor.execute("UPDATE users SET verified = 1 WHERE email = ?", (email,))
                 user_id = row["user_id"]
             else:
                 await cursor.execute(

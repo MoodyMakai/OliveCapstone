@@ -3,7 +3,7 @@ name = "bbfs-backend"
 version = "0.1.0"
 
 [tool.ruff]
-line-length = 88
+line-length = 102
 lint.select = ["E", "F", "I", "UP", "ASYNC"] # Add "D" later when writing documentation
 
 [tool.ruff.lint.pydocstyle]
