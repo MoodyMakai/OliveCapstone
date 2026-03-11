@@ -5,10 +5,12 @@ from functools import wraps
 from quart import g, jsonify, request
 
 from src.app import app
-from src.database_helpers import OTPRecord, hash_token
+from src.database_helpers import OTPRecord, hash_token, validate_email_format
 
 
 async def send_email(email: str, otp: str):
+    # In production, this would send an actual email
+    # For now, we'll just log it for debugging purposes
     print(f"Send {otp} to {email}")
 
 
@@ -19,6 +21,10 @@ async def request_otp():
 
     if not email:
         return jsonify({"error": "Email is required"}), 400
+
+    # Validate email format
+    if not validate_email_format(email):
+        return jsonify({"error": "Invalid email format"}), 400
 
     otp = "".join(str(secrets.randbelow(10)) for _ in range(6))
     expires_at = (datetime.now(tz=UTC) + timedelta(minutes=10)).isoformat()
@@ -38,6 +44,10 @@ async def verify_otp():
 
     if not email or not input_otp:
         return jsonify({"error": "Email and OTP are required"}), 400
+
+    # Validate email format
+    if not validate_email_format(email):
+        return jsonify({"error": "Invalid email format"}), 400
 
     record = await app.storage.db.get_otp(email)
     if not record:
@@ -87,6 +97,7 @@ def require_auth(f):
         if session.banned:
             return jsonify({"error": "This account is banned."}), 403
 
+        # Update token usage timestamp
         await app.storage.db.update_token_usage(hashed_token)
         g.user_id = session.user_id
 

@@ -2,7 +2,14 @@ from collections.abc import Buffer
 from datetime import datetime
 
 from src.database import DatabaseManager
-from src.database_helpers import Foodshare, Survey, User, validate_email_format
+from src.database_helpers import (
+    Foodshare,
+    Survey,
+    User,
+    sanitize_string,
+    validate_datetime_format,
+    validate_email_format,
+)
 from src.storage import LocalFileStorage
 
 
@@ -63,6 +70,21 @@ class StorageService:
         mimetype: str,
         picture_expires: datetime,
     ) -> int | None:
+        # Validate inputs
+        if not name or not location:
+            return None
+
+        # Sanitize inputs
+        name = sanitize_string(name)
+        location = sanitize_string(location)
+
+        # Validate date formats
+        if not validate_datetime_format(ends.isoformat()):
+            return None
+
+        if not validate_datetime_format(picture_expires.isoformat()):
+            return None
+
         picture_id = await self.add_picture_with_file(
             file_stream, extension, mimetype, picture_expires
         )
@@ -81,6 +103,11 @@ class StorageService:
         return foodshare_id
 
     async def register_user(self, email: str) -> int | None:
+        # Validate and sanitize email
+        if not email:
+            return None
+
+        email = sanitize_string(email)
         if not validate_email_format(email):
             return None
         return await self.db.add_user(email, False, False)

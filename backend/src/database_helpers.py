@@ -56,6 +56,10 @@ class Survey:
 
 
 def validate_email_format(email: str) -> bool:
+    # More robust email validation
+    if not email or "@" not in email:
+        return False
+
     # Regex explanation:
     # [^@\s]+: Matches one or more characters that aren't '@' or whitespace
     # @maine\.edu: Matches the literal characters: @maine.edu
@@ -63,6 +67,24 @@ def validate_email_format(email: str) -> bool:
     if re.fullmatch(regex, email, re.IGNORECASE):
         return True
     else:
+        return False
+
+
+def sanitize_string(input_str: str) -> str:
+    """Sanitize input string to prevent injection attacks."""
+    if not isinstance(input_str, str):
+        return ""
+    # Remove potentially dangerous characters
+    sanitized = input_str.strip()
+    return sanitized[:500]  # Limit length to prevent overly long inputs
+
+
+def validate_datetime_format(date_string: str) -> bool:
+    """Validate that a date string is properly formatted."""
+    try:
+        datetime.fromisoformat(date_string)
+        return True
+    except ValueError:
         return False
 
 

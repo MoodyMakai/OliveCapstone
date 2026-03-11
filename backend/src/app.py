@@ -1,3 +1,5 @@
+import mimetypes
+import os
 from dataclasses import asdict
 from datetime import datetime
 
@@ -7,7 +9,6 @@ from quart.json import jsonify
 from src.database import DatabaseManager
 
 # Blueprint for email token verification
-from src.email_routes import verification_bp
 from src.service import StorageService
 from src.storage import LocalFileStorage
 
@@ -20,8 +21,6 @@ class QuartApp(Quart):
 
 app = QuartApp(__name__)
 app.config["DB_PATH"] = "database.sqlite"
-# Registers the blueprint for email Verification links
-app.register_blueprint(verification_bp, url_prefix="/verify")
 
 
 @app.route("/users/<email>", methods=["POST"])
@@ -73,12 +72,45 @@ async def add_foodshare():
             user_id = int(user_id)
 
         picture_expires = datetime.fromisoformat(str(form.get("picture_expires")))
+
+        # Validate file extension and MIME type
+        if not picture.filename:
+            return jsonify({"error": "Invalid filename"}), 400
+
+        # Extract extension and validate it
         extension = (
-            picture.filename.split(".")[-1] if "." in picture.filename else "bin"
+            picture.filename.split(".")[-1].lower()
+            if "." in picture.filename
+            else "bin"
         )
-        mimetype = picture.mimetype
+
+        # Whitelist allowed file extensions
+        allowed_extensions = {"jpg", "jpeg", "png", "gif"}
+        if extension not in allowed_extensions:
+            return jsonify(
+                {
+                    "error": """Invalid file type. Only JPG, JPEG, PNG,
+                    and GIF files are allowed."""
+                }
+            ), 400
+
+        # Validate MIME type based on extension
+        mime_type, _ = mimetypes.guess_type(picture.filename)
+        if not mime_type or not mime_type.startswith("image/"):
+            return jsonify(
+                {"error": "Invalid file type. Please upload an image file."}
+            ), 400
+
+        # Validate file size (max 10MB)
+        picture.stream.seek(0, os.SEEK_END)
+        file_size = picture.stream.tell()
+        if file_size > 10 * 1024 * 1024:  # 10MB
+            return jsonify({"error": "File too large. Maximum file size is 10MB."}), 400
+        picture.stream.seek(0)  # Reset stream position
+
         if name is None or location is None:
             raise TypeError
+
         foodshare_id = await app.storage.create_foodshare_with_picture(
             name=name,
             location=location,
@@ -87,7 +119,7 @@ async def add_foodshare():
             user_id=user_id,
             file_stream=picture.stream,
             extension=extension,
-            mimetype=mimetype,
+            mimetype=mime_type,
             picture_expires=picture_expires,
         )
 
@@ -97,6 +129,9 @@ async def add_foodshare():
 
     except (ValueError, TypeError) as e:
         return jsonify({"error": f"Invalid data format: {str(e)}"}), 400
+    except Exception as e:
+        print(f"Unexpected error in add_foodshare: {e}")  # Log for debugging
+        return jsonify({"error": "Internal server error"}), 500
 
 
 # runs before startup
