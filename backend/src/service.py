@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Buffer
 from datetime import datetime
 
@@ -11,6 +12,8 @@ from src.database_helpers import (
     validate_email_format,
 )
 from src.storage import LocalFileStorage
+
+logger = logging.getLogger(__name__)
 
 
 class StorageService:
@@ -40,9 +43,6 @@ class StorageService:
 
         except Exception as e:
             # Log the error with full traceback for debugging
-            import logging
-
-            logger = logging.getLogger(__name__)
             logger.error(f"Error saving picture: {e}", exc_info=True)
             if filepath:
                 await self.storage.delete(filepath)
@@ -58,9 +58,6 @@ class StorageService:
             if success:
                 deleted_count += 1
             else:
-                import logging
-
-                logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to delete physical file: {filepath}")
 
         return deleted_count

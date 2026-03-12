@@ -26,5 +26,8 @@ class LocalFileStorage:
                 os.remove(filepath)
             return True
         except OSError as e:
-            print(f"Disk error: {e}")
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"Disk error: {e}")
             return False

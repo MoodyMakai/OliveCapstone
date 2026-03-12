@@ -1,3 +1,4 @@
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 from functools import wraps
@@ -6,6 +7,8 @@ from quart import g, jsonify, request
 
 from src.app import app
 from src.database_helpers import OTPRecord, hash_token, validate_email_format
+
+logger = logging.getLogger(__name__)
 
 
 async def send_email(email: str, otp: str):
