@@ -4,6 +4,7 @@ import os
 from dataclasses import asdict
 from datetime import datetime
 
+import aiosqlite
 from quart import Quart, request
 from quart.json import jsonify
 
@@ -24,6 +25,19 @@ app.config["DB_PATH"] = "database.sqlite"
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+# Set up sqlite
+def adapt_datetime(val):
+    return val.isoformat()
+
+
+def convert_datetime(val):
+    return datetime.fromisoformat(val.decode())
+
+
+aiosqlite.register_adapter(datetime, adapt_datetime)
+aiosqlite.register_converter("timestamp", convert_datetime)
 
 
 @app.route("/users/<email>", methods=["POST"])
