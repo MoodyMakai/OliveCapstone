@@ -1,3 +1,59 @@
+"""Database management module for the Foodshare backend.
+
+This module provides a comprehensive database interface using SQLite with async support.
+It handles all database operations for users, foodshares, pictures, OTPs, sessions, and surveys.
+
+The DatabaseManager class manages:
+- Connection lifecycle (connect, close)
+- Table initialization and schema management
+- User management operations
+- Foodshare and picture handling
+- OTP storage and retrieval
+- Session token management
+- Survey data operations
+
+Key features:
+- Async SQLite database operations using aiosqlite
+- Automatic datetime conversion for database storage
+- Comprehensive CRUD operations for all entities
+- Session token validation and usage tracking
+- OTP expiration and cleanup
+- Banned user account handling
+- Picture expiration management
+
+Classes:
+    DatabaseManager: Main class for database operations with async methods
+
+Methods:
+    connect: Establish database connection
+    close: Close database connection
+    init_tables: Initialize all required database tables
+    add_user: Create a new user record
+    get_user: Retrieve user by ID
+    get_user_by_email: Retrieve user by email address
+    get_user_by_token: Retrieve user associated with a token
+    update_user_status: Update user account status (banned/active)
+    delete_user_by_id: Remove user by ID
+    add_picture: Store picture metadata
+    get_picture: Retrieve picture by ID
+    delete_expired_pictures: Remove expired pictures from database
+    add_foodshare: Create new foodshare record
+    link_foodshare_restriction: Associate restrictions with foodshares
+    get_foodshare: Retrieve specific foodshare
+    get_all_active_foodshares: Fetch all currently active foodshares
+    add_survey: Store survey data
+    get_survey: Retrieve specific survey
+    get_all_surveys: Fetch all surveys
+    reset_token_lifetime: Reset token expiration time
+    save_otp: Store OTP for email verification
+    get_otp: Retrieve stored OTP for email verification
+    delete_otp: Remove expired or used OTP
+    create_device_token: Create new session token for user
+    get_session_by_token: Retrieve session by token
+    update_token_usage: Update token usage timestamp
+    create_or_verify_user: Create new user or verify existing one
+"""
+
 import logging
 from datetime import UTC, datetime
 
@@ -221,9 +277,7 @@ class DatabaseManager:
             logger.error(f"Failed to get user by token: {str(e)}", exc_info=True)
             raise
 
-    async def update_user_status(
-        self, user_id: int, verified: bool | None = None, banned: bool | None = None
-    ) -> None:
+    async def update_user_status(self, user_id: int, verified: bool | None = None, banned: bool | None = None) -> None:
         """Update a user's status (verified or banned).
 
         Args:
@@ -537,9 +591,7 @@ class DatabaseManager:
                     (num_participants, experience, other_thoughts, foodshare_fk_id)
                     VALUES (?, ?, ?, ?)
                 """
-            cursor = await self.conn.execute(
-                query, (num_participants, experience, other_thoughts, foodshare_fk_id)
-            )
+            cursor = await self.conn.execute(query, (num_participants, experience, other_thoughts, foodshare_fk_id))
             await self.conn.commit()
             survey_id = cursor.lastrowid
             logger.info(f"Survey added successfully with ID: {survey_id}")
@@ -566,11 +618,7 @@ class DatabaseManager:
                 row = await cursor.fetchone()
 
             if row:
-                foodshare = (
-                    await self.get_foodshare(row["foodshare_fk_id"])
-                    if row["foodshare_fk_id"]
-                    else None
-                )
+                foodshare = await self.get_foodshare(row["foodshare_fk_id"]) if row["foodshare_fk_id"] else None
                 survey = Survey(
                     survey_id=row["survey_id"],
                     num_participants=row["num_participants"],
@@ -676,9 +724,7 @@ class DatabaseManager:
         """
         try:
             async with self.conn.cursor() as cursor:
-                await cursor.execute(
-                    "SELECT email, otp, expires_at FROM otp_codes WHERE email = ?", (email,)
-                )
+                await cursor.execute("SELECT email, otp, expires_at FROM otp_codes WHERE email = ?", (email,))
                 row = await cursor.fetchone()
                 if row:
                     row_dict = dict(row)

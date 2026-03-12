@@ -1,3 +1,25 @@
+"""Local file storage module for the Foodshare backend.
+
+This module provides the LocalFileStorage class for managing file uploads and deletions
+using the local filesystem. It handles saving files with unique filenames and provides
+methods for deleting files when needed.
+
+Key features:
+- UUID-based filename generation to ensure uniqueness
+- Asynchronous file operations using aiofiles
+- Automatic directory creation for upload storage
+- Error handling for file system operations
+- Simple save and delete interface
+
+Classes:
+    LocalFileStorage: Manages local file storage operations with unique filename generation
+
+Methods:
+    __init__: Initialize the storage manager with upload folder path
+    save: Save a file stream to disk with a unique filename
+    delete: Delete a file from disk
+"""
+
 import os
 import uuid
 from collections.abc import Buffer

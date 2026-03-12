@@ -1,3 +1,38 @@
+"""Main application module for the Foodshare backend.
+
+This module initializes and configures the Quart web application, handles
+user registration, foodshare creation, and manages database operations
+and file storage through the StorageService.
+
+The application supports:
+- User registration with email validation
+- Foodshare creation with image uploads
+- Database operations using SQLite
+- Local file storage for images
+
+Key features:
+- RESTful API endpoints for user and foodshare management
+- File validation for image uploads (type, size, format)
+- Database schema initialization
+- Proper error handling and logging
+
+Attributes:
+    app (QuartApp): The main Quart application instance with storage support
+    logger: Application logger for tracking events and errors
+
+Endpoints:
+    POST /users/<email>: Create a new user
+    GET /foodshares: Retrieve all active foodshares
+    POST /foodshares: Add a new foodshare with associated image
+
+Usage:
+    Run directly to start the application server:
+        python app.py
+
+    The application will initialize database tables and set up storage
+    during startup, then listen for incoming requests on the default port.
+"""
+
 import logging
 import mimetypes
 import os

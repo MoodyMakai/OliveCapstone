@@ -1,3 +1,46 @@
+"""Authentication routes module for the Foodshare backend.
+
+This module handles all authentication-related endpoints including OTP (One-Time Password)
+generation and verification, user authentication, and session management. It provides
+email-based authentication with token-based session handling.
+
+The module implements:
+- OTP request and verification for email authentication
+- User session token generation and validation
+- Authentication decorators for protecting routes
+- Email sending functionality (stub implementation)
+- Rate limiting considerations (TODO)
+- Banned user account handling
+
+Key features:
+- Secure OTP generation and storage with expiration
+- Token-based authentication system
+- Session management and token usage tracking
+- Email format validation
+- Authentication decorator for route protection
+- Proper error handling and status codes
+
+Endpoints:
+    POST /auth/request-otp: Request an OTP for email verification
+    POST /auth/verify-otp: Verify the OTP and authenticate user
+
+Usage:
+    Import this module to register authentication routes with the main application.
+
+    The require_auth decorator can be applied to any route that requires
+    authentication, ensuring only valid users can access protected endpoints.
+
+Attributes:
+    app (QuartApp): The main Quart application instance
+    logger: Application logger for tracking authentication events and errors
+
+Decorators:
+    require_auth: Decorator to protect routes requiring authentication
+
+Functions:
+    send_email: Stub function for sending OTP emails (to be implemented in production)
+"""
+
 import logging
 import secrets
 from datetime import UTC, datetime, timedelta

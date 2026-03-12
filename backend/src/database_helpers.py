@@ -1,3 +1,37 @@
+"""Database helper module for the Foodshare backend.
+
+This module provides data classes and utility functions that support database operations
+and data validation throughout the application. It contains shared data structures and
+helper functions used across various parts of the system.
+
+Key features:
+- Data classes for all major entities (User, OTPRecord, DeviceSession, PictureMetadata,
+  Foodshare, Survey)
+- Email format validation specifically for maine.edu domain
+- Input sanitization to prevent injection attacks
+- Date/time validation utilities
+- Token hashing and generation functions
+- Secure random token generation
+
+Data Classes:
+    User: Represents a user in the system with ID, email, verification status, and ban status
+    OTPRecord: Stores one-time password information for email verification
+    DeviceSession: Represents a user session with associated user ID and ban status
+    PictureMetadata: Contains metadata for stored pictures including expiration and file path
+    Foodshare: Represents a foodshare listing with details, restrictions, and creator info
+    Survey: Stores survey responses related to foodshares
+
+Functions:
+    validate_email_format: Validates email addresses follow maine.edu domain format
+    sanitize_string: Sanitizes input strings to prevent injection attacks
+    validate_datetime_format: Validates ISO format date/time strings
+    hash_token: Hashes tokens using SHA256 for secure storage
+    generate_secure_token: Creates cryptographically secure random tokens
+
+Usage:
+    Import this module to access data classes and utility functions for database operations.
+"""
+
 import hashlib
 import re
 import secrets

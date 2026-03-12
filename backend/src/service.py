@@ -1,3 +1,37 @@
+"""Storage service module for the Foodshare backend.
+
+This module provides the StorageService class which handles all storage-related operations
+including file management, user registration, foodshare creation with pictures, and survey submissions.
+It acts as a bridge between the database layer and the storage layer, coordinating complex operations
+that involve both persistent storage and file system operations.
+
+Key features:
+- Picture upload and management with automatic cleanup of expired files
+- User registration with email validation
+- Foodshare creation with associated picture handling
+- Survey submission and retrieval
+- Database and file system coordination
+- Error handling and resource cleanup
+- Input sanitization and validation
+
+Classes:
+    StorageService: Main service class for coordinating storage operations
+
+Methods:
+    __init__: Initialize the service with database and storage managers
+    close: Close the database connection
+    add_picture_with_file: Save a picture file and record its metadata
+    cleanup_expired_pictures: Delete expired picture files from storage and database
+    create_foodshare_with_picture: Create foodshare with associated picture
+    register_user: Register a new user in the system
+    get_user: Retrieve user by ID, email, or token
+    verify_user: Mark a user as verified
+    list_active_foodshares: Retrieve all active foodshares
+    delete_foodshare: Delete foodshare and its associated picture
+    submit_survey: Submit a survey response
+    list_all_surveys: Retrieve all survey responses
+"""
+
 import logging
 from collections.abc import Buffer
 from datetime import datetime
@@ -62,9 +96,7 @@ class StorageService:
         try:
             filepath = await self.storage.save(file_stream, extension)
 
-            picture_id = await self.db.add_picture(
-                expires=expires, filepath=filepath, mimetype=mimetype
-            )
+            picture_id = await self.db.add_picture(expires=expires, filepath=filepath, mimetype=mimetype)
             return picture_id
 
         except Exception as e:
@@ -142,9 +174,7 @@ class StorageService:
         if not validate_datetime_format(picture_expires):
             return None
 
-        picture_id = await self.add_picture_with_file(
-            file_stream, extension, mimetype, picture_expires
-        )
+        picture_id = await self.add_picture_with_file(file_stream, extension, mimetype, picture_expires)
 
         if not picture_id:
             return None
@@ -237,9 +267,7 @@ class StorageService:
                 (foodshare.picture.picture_id,),
             )
 
-        await self.db.conn.execute(
-            "DELETE FROM foodshare_restrictions WHERE foodshare_id = ?", (foodshare_id,)
-        )
+        await self.db.conn.execute("DELETE FROM foodshare_restrictions WHERE foodshare_id = ?", (foodshare_id,))
 
         await self.db.conn.execute("DELETE FROM foodshares WHERE foodshare_id = ?", (foodshare_id,))
         await self.db.conn.commit()
