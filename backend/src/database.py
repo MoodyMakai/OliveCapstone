@@ -1,5 +1,6 @@
 import logging
 from datetime import UTC, datetime
+from typing import List, Optional
 
 import aiosqlite
 import anyio
@@ -17,10 +18,29 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseManager:
+    """Manages database connections and operations for the foodsharing application.
+
+    This class handles all database interactions including user management,
+    foodshare listings, picture storage, and authentication tokens.
+    """
+
     def __init__(self, db_path: str) -> None:
+        """Initialize the DatabaseManager with a path to the SQLite database.
+
+        Args:
+            db_path (str): Path to the SQLite database file
+        """
         self.db_path: str = db_path
 
     async def connect(self):
+        """Establish connection to the database.
+
+        Sets up database configuration options including WAL mode, foreign keys,
+        and synchronous settings for optimal performance.
+
+        Raises:
+            Exception: If database connection fails
+        """
         # Connect to the database
         try:
             self.conn = await aiosqlite.connect(self.db_path, timeout=20.0)
@@ -36,6 +56,11 @@ class DatabaseManager:
             raise
 
     async def close(self):
+        """Close the database connection.
+
+        Raises:
+            Exception: If database connection fails to close properly
+        """
         try:
             if self.conn:
                 await self.conn.close()
@@ -45,9 +70,16 @@ class DatabaseManager:
             raise
 
     async def init_tables(self):
+        """Initialize all database tables.
+
+        Reads the SQL schema from init_tables.sql and executes it to create
+        all required tables and indexes.
+
+        Raises:
+            Exception: If table initialization fails
+        """
         try:
             current_dir = anyio.Path(__file__).parent
-
             sql_file_path = current_dir / "sql" / "init_tables.sql"
 
             async with await anyio.open_file(sql_file_path, "r") as sql_file:
@@ -63,6 +95,19 @@ class DatabaseManager:
     # User functions
 
     async def add_user(self, email: str, verified: bool = False, banned: bool = False) -> int | None:
+        """Add a new user to the database.
+
+        Args:
+            email (str): The user's email address
+            verified (bool): Whether the user is verified (default: False)
+            banned (bool): Whether the user is banned (default: False)
+
+        Returns:
+            int | None: The ID of the newly created user, or None if failed
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = """
                 INSERT INTO users (email, verified, banned)
@@ -78,6 +123,17 @@ class DatabaseManager:
             raise
 
     async def get_user(self, user_id: int) -> User | None:
+        """Retrieve a user by their ID.
+
+        Args:
+            user_id (int): The user's ID
+
+        Returns:
+            User | None: The User object if found, or None if not found
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = "SELECT * FROM users WHERE user_id = ?"
             async with self.conn.execute(query, (user_id,)) as cursor:
@@ -99,6 +155,17 @@ class DatabaseManager:
             raise
 
     async def get_user_by_email(self, email: str) -> User | None:
+        """Retrieve a user by their email address.
+
+        Args:
+            email (str): The user's email address
+
+        Returns:
+            User | None: The User object if found, or None if not found
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = "SELECT * FROM users WHERE email = ?"
             async with self.conn.execute(query, (email,)) as cursor:
@@ -120,6 +187,17 @@ class DatabaseManager:
             raise
 
     async def get_user_by_token(self, token: str) -> User | None:
+        """Retrieve a user by their authentication token.
+
+        Args:
+            token (str): The authentication token hash
+
+        Returns:
+            User | None: The User object if found, or None if not found
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = """
             SELECT u.user_id, u.email, u.verified, u.banned
@@ -147,6 +225,16 @@ class DatabaseManager:
     async def update_user_status(
         self, user_id: int, verified: bool | None = None, banned: bool | None = None
     ) -> None:
+        """Update a user's status (verified or banned).
+
+        Args:
+            user_id (int): The ID of the user to update
+            verified (bool | None): New verified status or None to leave unchanged
+            banned (bool | None): New banned status or None to leave unchanged
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             updates = []
             params = []
@@ -172,6 +260,14 @@ class DatabaseManager:
 
     # aiosqlite is expecting a tuple, but is recieving an int
     async def delete_user_by_id(self, user_id: int):
+        """Delete a user by their ID.
+
+        Args:
+            user_id (int): The ID of the user to delete
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             await self.conn.execute("DELETE FROM users where user_id = ?", (user_id,))
             await self.conn.commit()
@@ -183,6 +279,19 @@ class DatabaseManager:
     # Picture functions
 
     async def add_picture(self, expires: datetime, filepath: str, mimetype: str) -> int | None:
+        """Add a picture record to the database.
+
+        Args:
+            expires (datetime): When the picture expires
+            filepath (str): Path to the picture file
+            mimetype (str): MIME type of the picture
+
+        Returns:
+            int | None: The ID of the newly created picture, or None if failed
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = """
                 INSERT INTO pictures (expires, filepath, mimetype)
@@ -198,6 +307,17 @@ class DatabaseManager:
             raise
 
     async def get_picture(self, picture_id: int) -> PictureMetadata | None:
+        """Retrieve a picture by its ID.
+
+        Args:
+            picture_id (int): The picture's ID
+
+        Returns:
+            PictureMetadata | None: The picture metadata if found, or None if not found
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = "SELECT * FROM pictures WHERE picture_id = ?"
             async with self.conn.execute(query, (picture_id,)) as cursor:
@@ -219,6 +339,14 @@ class DatabaseManager:
             raise
 
     async def delete_expired_pictures(self) -> list[str]:
+        """Delete expired pictures and return their file paths.
+
+        Returns:
+            list[str]: List of file paths that were deleted
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             now = datetime.now(tz=UTC)
             select_query = "SELECT filepath FROM pictures WHERE expires < ?"
@@ -248,6 +376,22 @@ class DatabaseManager:
         user_fk_id: int | None = None,
         picture_fk_id: int | None = None,
     ) -> int | None:
+        """Add a new foodshare record to the database.
+
+        Args:
+            name (str): Name of the foodshare
+            location (str): Location of the foodshare
+            ends (datetime): When the foodshare ends
+            active (bool): Whether the foodshare is active
+            user_fk_id (int | None): ID of the user who created it
+            picture_fk_id (int | None): ID of the associated picture
+
+        Returns:
+            int | None: The ID of the newly created foodshare, or None if failed
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = """
                     INSERT INTO foodshares
@@ -267,6 +411,15 @@ class DatabaseManager:
             raise
 
     async def link_foodshare_restriction(self, foodshare_id: int, restriction_id: int) -> None:
+        """Link a foodshare with a restriction.
+
+        Args:
+            foodshare_id (int): The ID of the foodshare
+            restriction_id (int): The ID of the restriction to link
+
+        Raises:
+            Exception: If database operation fails
+        """
         query = """
         INSERT OR IGNORE INTO foodshare_restrictions
         (foodshare_id, restriction_id) VALUES (?, ?)
@@ -275,6 +428,17 @@ class DatabaseManager:
         await self.conn.commit()
 
     async def get_foodshare(self, foodshare_id: int) -> Foodshare | None:
+        """Retrieve a foodshare by its ID.
+
+        Args:
+            foodshare_id (int): The foodshare's ID
+
+        Returns:
+            Foodshare | None: The Foodshare object if found, or None if not found
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = "SELECT * FROM foodshares WHERE foodshare_id = ?"
             async with self.conn.execute(query, (foodshare_id,)) as cursor:
@@ -298,6 +462,7 @@ class DatabaseManager:
                 JOIN foodshare_restrictions fr ON r.restriction_id = fr.restriction_id
                 WHERE fr.foodshare_id = ?
             """
+
             async with self.conn.execute(restrictions_query, (foodshare_id,)) as cursor:
                 rest_rows = await cursor.fetchall()
                 restrictions_list = [row["label"] for row in rest_rows]
@@ -319,6 +484,14 @@ class DatabaseManager:
             raise
 
     async def get_all_active_foodshares(self) -> list[Foodshare]:
+        """Retrieve all active foodshares from the database.
+
+        Returns:
+            list[Foodshare]: List of all active Foodshare objects
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = "SELECT foodshare_id FROM foodshares WHERE active = 1"
             async with self.conn.execute(query) as cursor:
@@ -345,7 +518,20 @@ class DatabaseManager:
         other_thoughts: str,
         foodshare_fk_id: int | None = None,
     ) -> int | None:
-        """Inserts a new survey record."""
+        """Inserts a new survey record.
+
+        Args:
+            num_participants (int): Number of participants
+            experience (int): Experience rating
+            other_thoughts (str): Additional thoughts
+            foodshare_fk_id (int | None): ID of the related foodshare
+
+        Returns:
+            int | None: The ID of the newly created survey, or None if failed
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = """
                     INSERT INTO surveys
@@ -364,6 +550,17 @@ class DatabaseManager:
             raise
 
     async def get_survey(self, survey_id: int) -> Survey | None:
+        """Retrieve a survey by its ID.
+
+        Args:
+            survey_id (int): The survey's ID
+
+        Returns:
+            Survey | None: The Survey object if found, or None if not found
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = "SELECT * FROM surveys WHERE survey_id = ?"
             async with self.conn.execute(query, (survey_id,)) as cursor:
@@ -391,6 +588,14 @@ class DatabaseManager:
             raise
 
     async def get_all_surveys(self) -> list["Survey"]:
+        """Retrieve all surveys from the database.
+
+        Returns:
+            list[Survey]: List of all Survey objects
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             query = "SELECT survey_id FROM surveys"
             async with self.conn.execute(query) as cursor:
@@ -408,6 +613,14 @@ class DatabaseManager:
             raise
 
     async def reset_token_lifetime(self, token_hash: str):
+        """Reset the lifetime of a device token.
+
+        Args:
+            token_hash (str): The hash of the token to reset
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             await self.conn.execute(
                 """UPDATE device_tokens SET last_used = CURRENT_TIMESTAMP
@@ -421,6 +634,17 @@ class DatabaseManager:
             raise
 
     async def save_otp(self, otp_record: OTPRecord) -> int | None:
+        """Save an OTP record to the database.
+
+        Args:
+            otp_record (OTPRecord): The OTP record to save
+
+        Returns:
+            int | None: The ID of the saved record, or None if failed
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             cursor = await self.conn.execute(
                 """
@@ -440,6 +664,17 @@ class DatabaseManager:
             raise
 
     async def get_otp(self, email: str) -> OTPRecord | None:
+        """Retrieve an OTP record by email.
+
+        Args:
+            email (str): The email address associated with the OTP
+
+        Returns:
+            OTPRecord | None: The OTP record if found, or None if not found
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             async with self.conn.cursor() as cursor:
                 await cursor.execute(
@@ -463,6 +698,17 @@ class DatabaseManager:
             raise
 
     async def delete_otp(self, email: str) -> int | None:
+        """Delete an OTP record by email.
+
+        Args:
+            email (str): The email address associated with the OTP
+
+        Returns:
+            int | None: The ID of the deleted record, or None if failed
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             async with self.conn.cursor() as cursor:
                 await cursor.execute("DELETE FROM otp_codes WHERE email = ?", (email,))
@@ -474,6 +720,18 @@ class DatabaseManager:
             raise
 
     async def create_device_token(self, user_id: int, token_hash: str):
+        """Create a device token for a user.
+
+        Args:
+            user_id (int): The ID of the user
+            token_hash (str): The hash of the token to create
+
+        Returns:
+            int | None: The ID of the created token, or None if failed
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             async with self.conn.cursor() as cursor:
                 await cursor.execute(
@@ -488,7 +746,17 @@ class DatabaseManager:
             raise
 
     async def get_session_by_token(self, token_hash: str) -> DeviceSession | None:
-        """Returns a DeviceSession dataclass to validate the auth token."""
+        """Returns a DeviceSession dataclass to validate the auth token.
+
+        Args:
+            token_hash (str): The hash of the authentication token
+
+        Returns:
+            DeviceSession | None: The session information if found, or None if not found
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             async with self.conn.cursor() as cursor:
                 query = """
@@ -510,6 +778,14 @@ class DatabaseManager:
             raise
 
     async def update_token_usage(self, token_hash: str) -> int | None:
+        """Update the last used timestamp of a token.
+
+        Args:
+            token_hash (str): The hash of the token to update
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             async with self.conn.cursor() as cursor:
                 await cursor.execute(
@@ -526,6 +802,17 @@ class DatabaseManager:
             raise
 
     async def create_or_verify_user(self, email: str) -> int | None:
+        """Create a new user or verify an existing one.
+
+        Args:
+            email (str): The email address of the user
+
+        Returns:
+            int | None: The ID of the created/verified user, or None if failed
+
+        Raises:
+            Exception: If database operation fails
+        """
         try:
             async with self.conn.cursor() as cursor:
                 await cursor.execute("SELECT user_id FROM users WHERE email = ?", (email,))
