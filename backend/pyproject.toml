@@ -6,7 +6,7 @@ version = "0.1.0"
 line-length = 120
 lint.select = ["E", "F", "I", "UP", "ASYNC", "D"] # Add "D" later when writing documentation
 
-per-file-ignores = {
+lint.per-file-ignores = {
     "test_*.py" = ["D100", "D101", "D102", "D103", "D104", "D105", "D107"],
     "tests/*.py" = ["D100", "D101", "D102", "D103", "D104", "D105", "D107"],
 }
