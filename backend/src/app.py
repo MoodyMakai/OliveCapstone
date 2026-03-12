@@ -16,6 +16,12 @@ from src.storage import LocalFileStorage
 
 
 class QuartApp(Quart):
+    """A custom Quart application class with storage support.
+
+    This class extends Quart to include a storage attribute for handling
+    database operations and file storage.
+    """
+
     storage: StorageService  # Define storage explicitly to stop pyright from complaining
 
 
@@ -29,10 +35,26 @@ logger = logging.getLogger(__name__)
 
 # Set up sqlite
 def adapt_datetime(val):
+    """Convert datetime object to ISO format string for database storage.
+
+    Args:
+        val (datetime): The datetime object to convert
+
+    Returns:
+        str: ISO format string representation of the datetime
+    """
     return val.isoformat()
 
 
 def convert_datetime(val):
+    """Convert ISO format string back to datetime object.
+
+    Args:
+        val (bytes): The ISO format string to convert
+
+    Returns:
+        datetime: The converted datetime object
+    """
     return datetime.fromisoformat(val.decode())
 
 
@@ -41,7 +63,12 @@ aiosqlite.register_converter("timestamp", convert_datetime)
 
 
 @app.route("/users/<email>", methods=["POST"])
-async def create_user(email):
+async def create_user():
+    """Create a new user with the given email.
+
+    Returns:
+        tuple: JSON response with success message and user ID or error message
+    """
     data = await request.get_json()
     if not data or "email" not in data:
         logger.warning("Missing email data in create_user request")
@@ -63,6 +90,11 @@ async def create_user(email):
 
 @app.route("/foodshares", methods=["GET"])
 async def get_all_active_foodshares():
+    """Retrieve all active foodshares from the database.
+
+    Returns:
+        tuple: JSON response with list of active foodshares or error message
+    """
     foodshares = await app.storage.list_active_foodshares()
     foodshares = [asdict(f) for f in foodshares]
     return jsonify(foodshares), 200
@@ -70,6 +102,13 @@ async def get_all_active_foodshares():
 
 @app.route("/foodshares", methods=["POST"])
 async def add_foodshare():
+    """Add a new foodshare with associated picture.
+
+    Validates file type, size, and format before creating the foodshare.
+
+    Returns:
+        tuple: JSON response with success message and foodshare ID or error message
+    """
     form = await request.form
     files = await request.files
     if not form or not files:
@@ -162,6 +201,13 @@ async def add_foodshare():
 # runs before startup
 @app.before_serving
 async def startup():
+    """Initialize the application before serving.
+
+    Sets up database connection, initializes tables, and configures storage service.
+
+    Raises:
+        Exception: If there's an error during application initialization
+    """
     # Add the database manager to the app
     try:
         db = DatabaseManager(db_path=app.config["DB_PATH"])
@@ -177,6 +223,13 @@ async def startup():
 
 @app.after_serving
 async def shutdown():
+    """Clean up resources after the application stops serving.
+
+    Closes the storage service connection.
+
+    Raises:
+        Exception: If there's an error during application shutdown
+    """
     # Close the storage
     try:
         await app.storage.close()
@@ -186,4 +239,5 @@ async def shutdown():
 
 
 if __name__ == "__main__":
+    """Run the application when executed directly."""
     app.run()
