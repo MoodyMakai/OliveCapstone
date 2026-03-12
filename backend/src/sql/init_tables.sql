@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS device_tokens (
 -- Pictures table
 CREATE TABLE IF NOT EXISTS pictures (
     picture_id INTEGER PRIMARY KEY,
-    expires TEXT NOT NULL,
+    expires TIMESTAMP NOT NULL,
     filepath TEXT NOT NULL,
     mimetype TEXT NOT NULL
 );
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS foodshares (
     foodshare_id INTEGER PRIMARY KEY,
     name TEXT,
     location TEXT,
-    ends TEXT NOT NULL,
+    ends TIMESTAMP NOT NULL,
     active INTEGER DEFAULT 1 CHECK(active IN (0, 1)),
     user_fk_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
     picture_fk_id INTEGER REFERENCES pictures(picture_id) ON DELETE SET NULL

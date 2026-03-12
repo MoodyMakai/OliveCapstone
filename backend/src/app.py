@@ -1,3 +1,4 @@
+import logging
 import mimetypes
 import os
 from dataclasses import asdict
@@ -20,22 +21,30 @@ class QuartApp(Quart):
 app = QuartApp(__name__)
 app.config["DB_PATH"] = "database.sqlite"
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 @app.route("/users/<email>", methods=["POST"])
 async def create_user(email):
     data = await request.get_json()
     if not data or "email" not in data:
+        logger.warning("Missing email data in create_user request")
         return jsonify({"error": "An email address is required."}), 400
 
     try:
         user_id = await app.storage.register_user(email=data["email"])
         if user_id is None:
+            logger.warning(f"Failed to register user with email: {data['email']}")
             return jsonify({"error": "Invalid email address."}), 400
+        logger.info(f"Successfully created user with ID: {user_id}")
         return jsonify({"message": "User successfully created.", "user_id": user_id}), 201
     except Exception as e:
-        if "UNIQUE" in str(e):
+        logger.error(f"Error creating user: {str(e)}", exc_info=True)
+        if "UNIQUE" in str(e).upper():
             return jsonify({"error": "A user with that email already exists."}), 400
-        return jsonify({"error": "Internal server error."}), 500
+        return jsonify({"error": "Internal server error occurred while creating user."}), 500
 
 
 @app.route("/foodshares", methods=["GET"])
@@ -63,14 +72,19 @@ async def add_foodshare():
         active = form.get("active", "true").lower() == "true"
         user_id = form.get("user_id")
         if user_id is None:
+            logger.warning("Missing user_id in add_foodshare request")
             raise TypeError
         else:
-            user_id = int(user_id)
+            try:
+                user_id = int(user_id)
+            except ValueError:
+                return jsonify({"error": "Invalid user ID format"}), 400
 
         picture_expires = datetime.fromisoformat(str(form.get("picture_expires")))
 
         # Validate file extension and MIME type
         if not picture.filename:
+            logger.warning("Missing filename in add_foodshare request")
             return jsonify({"error": "Invalid filename"}), 400
 
         # Extract extension and validate it
@@ -79,6 +93,7 @@ async def add_foodshare():
         # Whitelist allowed file extensions
         allowed_extensions = {"jpg", "jpeg", "png", "gif"}
         if extension not in allowed_extensions:
+            logger.warning(f"Invalid file extension: {extension}")
             return jsonify(
                 {
                     "error": """Invalid file type. Only JPG, JPEG, PNG,
@@ -89,16 +104,19 @@ async def add_foodshare():
         # Validate MIME type based on extension
         mime_type, _ = mimetypes.guess_type(picture.filename)
         if not mime_type or not mime_type.startswith("image/"):
+            logger.warning(f"Invalid MIME type for file: {picture.filename}")
             return jsonify({"error": "Invalid file type. Please upload an image file."}), 400
 
         # Validate file size (max 10MB)
         picture.stream.seek(0, os.SEEK_END)
         file_size = picture.stream.tell()
         if file_size > 10 * 1024 * 1024:  # 10MB
+            logger.warning(f"File too large: {file_size} bytes")
             return jsonify({"error": "File too large. Maximum file size is 10MB."}), 400
         picture.stream.seek(0)  # Reset stream position
 
         if name is None or location is None:
+            logger.warning("Missing name or location in add_foodshare request")
             raise TypeError
 
         foodshare_id = await app.storage.create_foodshare_with_picture(
@@ -114,31 +132,43 @@ async def add_foodshare():
         )
 
         if foodshare_id:
+            logger.info(f"Successfully created foodshare with ID: {foodshare_id}")
             return jsonify({"success": True, "foodshare_id": foodshare_id}), 201
+        logger.error("Failed to create foodshare in database")
         return jsonify({"error": "Failed to create foodshare"}), 500
 
     except (ValueError, TypeError) as e:
+        logger.warning(f"Invalid data format in add_foodshare: {str(e)}")
         return jsonify({"error": f"Invalid data format: {str(e)}"}), 400
     except Exception as e:
-        print(f"Unexpected error in add_foodshare: {e}")  # Log for debugging
-        return jsonify({"error": "Internal server error"}), 500
+        logger.error(f"Unexpected error in add_foodshare: {str(e)}", exc_info=True)
+        return jsonify({"error": "Internal server error occurred while creating foodshare"}), 500
 
 
 # runs before startup
 @app.before_serving
 async def startup():
     # Add the database manager to the app
-    db = DatabaseManager(db_path=app.config["DB_PATH"])
-    await db.connect()
-    await db.init_tables()
-    local_file_store = LocalFileStorage("images")
-    app.storage = StorageService(db, local_file_store)
+    try:
+        db = DatabaseManager(db_path=app.config["DB_PATH"])
+        await db.connect()
+        await db.init_tables()
+        local_file_store = LocalFileStorage("images")
+        app.storage = StorageService(db, local_file_store)
+        logger.info("Application started successfully")
+    except Exception as e:
+        logger.error(f"Failed to start application: {str(e)}", exc_info=True)
+        raise
 
 
 @app.after_serving
 async def shutdown():
     # Close the storage
-    await app.storage.close()
+    try:
+        await app.storage.close()
+        logger.info("Application shut down successfully")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {str(e)}", exc_info=True)
 
 
 if __name__ == "__main__":

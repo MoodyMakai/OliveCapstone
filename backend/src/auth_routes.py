@@ -26,8 +26,15 @@ async def request_otp():
     if not validate_email_format(email):
         return jsonify({"error": "Invalid email format"}), 400
 
+    # TODO: Add rate limiting to prevent abuse
     otp = "".join(str(secrets.randbelow(10)) for _ in range(6))
-    expires_at = (datetime.now(tz=UTC) + timedelta(minutes=10)).isoformat()
+    # Check if user exists and is banned
+    user = await app.storage.get_user(email=email)
+    if user and user.banned:
+        return jsonify({"error": "This account is banned."}), 403
+
+    otp = "".join(str(secrets.randbelow(10)) for _ in range(6))
+    expires_at = datetime.now(tz=UTC) + timedelta(minutes=10)
 
     otp_record = OTPRecord(email=email, otp=otp, expires_at=expires_at)
     await app.storage.db.save_otp(otp_record)
@@ -53,7 +60,7 @@ async def verify_otp():
     if not record:
         return jsonify({"error": "No OTP found for this email"}), 401
 
-    expires_at = datetime.fromisoformat(record.expires_at)
+    expires_at = record.expires_at
     if datetime.now(tz=UTC) > expires_at:
         await app.storage.db.delete_otp(email)
         return jsonify({"error": "OTP has expired"}), 401

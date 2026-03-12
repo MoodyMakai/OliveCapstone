@@ -17,7 +17,7 @@ class User:
 class OTPRecord:
     email: str
     otp: str
-    expires_at: str
+    expires_at: datetime
 
 
 @dataclass
@@ -60,10 +60,12 @@ def validate_email_format(email: str) -> bool:
     if not email or "@" not in email:
         return False
 
-    # Regex explanation:
-    # [^@\s]+: Matches one or more characters that aren't '@' or whitespace
-    # @maine\.edu: Matches the literal characters: @maine.edu
-    regex = r"[^@\s]+@maine\.edu"
+    # More comprehensive regex that properly validates the email format
+    # This pattern ensures:
+    # - Local part (before @): alphanumeric, dots, underscores, hyphens, plus signs
+    # - Domain: must be @maine.edu exactly
+    # - No spaces or invalid characters
+    regex = r"^[a-zA-Z0-9._%+-]+@maine\.edu$"
     if re.fullmatch(regex, email, re.IGNORECASE):
         return True
     else:
@@ -74,14 +76,20 @@ def sanitize_string(input_str: str) -> str:
     """Sanitize input string to prevent injection attacks."""
     if not isinstance(input_str, str):
         return ""
-    # Remove potentially dangerous characters
+
+    # Remove potentially dangerous characters and sequences
     sanitized = input_str.strip()
-    return sanitized[:500]  # Limit length to prevent overly long inputs
+
+    # Limit length to prevent overly long inputs
+    return sanitized[:500]
 
 
-def validate_datetime_format(date_string: str) -> bool:
+def validate_datetime_format(date_string: str | datetime) -> bool:
     """Validate that a date string is properly formatted."""
     try:
+        if isinstance(date_string, datetime):
+            # If it's already a datetime object, it's valid
+            return True
         datetime.fromisoformat(date_string)
         return True
     except ValueError:

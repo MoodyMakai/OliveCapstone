@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import aiofiles
 import anyio
@@ -26,7 +26,7 @@ async def test_user_registration(storage_service: StorageService):
 @pytest.mark.asyncio
 async def test_storage_service_saves_file_and_metadata(storage_service: StorageService):
     dummy_file_stream = b"fake image data"
-    expires = datetime.now() + timedelta(days=1)
+    expires = datetime.now(tz=UTC) + timedelta(days=1)
 
     picture_id = await storage_service.add_picture_with_file(
         file_stream=dummy_file_stream,

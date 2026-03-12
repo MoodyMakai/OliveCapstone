@@ -39,7 +39,11 @@ class StorageService:
             return picture_id
 
         except Exception as e:
-            print(f"Error saving picture: {e}")
+            # Log the error with full traceback for debugging
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error saving picture: {e}", exc_info=True)
             if filepath:
                 await self.storage.delete(filepath)
             return None
@@ -54,7 +58,10 @@ class StorageService:
             if success:
                 deleted_count += 1
             else:
-                print(f"Failed to delete physical file: {filepath}")
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to delete physical file: {filepath}")
 
         return deleted_count
 
@@ -79,10 +86,10 @@ class StorageService:
         location = sanitize_string(location)
 
         # Validate date formats
-        if not validate_datetime_format(ends.isoformat()):
+        if not validate_datetime_format(ends):
             return None
 
-        if not validate_datetime_format(picture_expires.isoformat()):
+        if not validate_datetime_format(picture_expires):
             return None
 
         picture_id = await self.add_picture_with_file(
