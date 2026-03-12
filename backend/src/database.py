@@ -1,6 +1,5 @@
 import logging
 from datetime import UTC, datetime
-from typing import List, Optional
 
 import aiosqlite
 import anyio
