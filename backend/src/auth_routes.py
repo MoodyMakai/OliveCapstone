@@ -12,6 +12,15 @@ logger = logging.getLogger(__name__)
 
 
 async def send_email(email: str, otp: str):
+    """Send an email with the OTP to the specified email address.
+
+    In production, this would send an actual email. For now, it logs
+    the OTP for debugging purposes.
+
+    Args:
+        email (str): The recipient's email address
+        otp (str): The one-time password to send
+    """
     # In production, this would send an actual email
     # For now, we'll just log it for debugging purposes
     print(f"Send {otp} to {email}")
@@ -19,6 +28,13 @@ async def send_email(email: str, otp: str):
 
 @app.route("/auth/request-otp", methods=["POST"])
 async def request_otp():
+    """Request an OTP (One-Time Password) for email verification.
+
+    Validates the email format and sends an OTP if valid.
+
+    Returns:
+        tuple: JSON response indicating success or error
+    """
     data = await request.get_json()
     email = data.get("email")
 
@@ -48,6 +64,14 @@ async def request_otp():
 
 @app.route("/auth/verify-otp", methods=["POST"])
 async def verify_otp():
+    """Verify the OTP provided by the user.
+
+    Validates the OTP against the stored value and creates a session token
+    if successful.
+
+    Returns:
+        tuple: JSON response with authentication status and token or error
+    """
     data = await request.get_json()
     email = data.get("email")
     input_otp = data.get("otp")
@@ -89,6 +113,17 @@ async def verify_otp():
 
 
 def require_auth(f):
+    """Decorator to require authentication for a route.
+
+    Checks if the user has a valid session token in the Authorization header.
+
+    Args:
+        f (function): The function to decorate
+
+    Returns:
+        function: The decorated function with authentication check
+    """
+
     @wraps(f)
     async def decorated_function(*args, **kwargs):
         auth_header = request.headers.get("Authorization")
