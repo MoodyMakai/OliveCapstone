@@ -3,13 +3,17 @@ name = "bbfs-backend"
 version = "0.1.0"
 
 [tool.ruff]
-line-length = 88
-lint.select = ["E", "F", "I", "UP", "ASYNC"] # Add "D" later when writing documentation
+line-length = 120
+lint.select = ["E", "F", "I", "UP", "ASYNC", "D"]
+
+[tool.ruff.lint.per-file-ignores]
+"test_*.py" = ["D100", "D101", "D102", "D103", "D104", "D105", "D107"]
+"tests/*.py" = ["D100", "D101", "D102", "D103", "D104", "D105", "D107"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto" # Needed for Quart
+asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
