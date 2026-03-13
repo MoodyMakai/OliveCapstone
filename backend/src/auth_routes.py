@@ -9,7 +9,6 @@ The module implements:
 - User session token generation and validation
 - Authentication decorators for protecting routes
 - Email sending functionality (stub implementation)
-- Rate limiting considerations (TODO)
 - Banned user account handling
 
 Key features:
@@ -48,6 +47,7 @@ from functools import wraps
 from typing import cast
 
 from quart import Blueprint, current_app, g, jsonify, request
+from quart_rate_limiter import rate_limit
 
 from src.core import QuartApp
 from src.database_helpers import OTPRecord, hash_token, validate_email_format
@@ -70,6 +70,7 @@ async def send_email(email: str, otp: str):
 
 
 @auth_bp.route("/request-otp", methods=["POST"])
+@rate_limit(3, timedelta(minutes=10))
 async def request_otp():
     """Request an OTP (One-Time Password) for email verification.
 
@@ -105,6 +106,7 @@ async def request_otp():
 
 
 @auth_bp.route("/auth/verify-otp", methods=["POST"])
+@rate_limit(5, timedelta(minutes=1))
 async def verify_otp():
     """Verify the OTP provided by the user.
 
