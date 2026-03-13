@@ -40,32 +40,25 @@ from dataclasses import asdict
 from datetime import datetime
 
 import aiosqlite
-from quart import Quart, request
+from quart import request
 from quart.json import jsonify
+from quart_rate_limiter import RateLimiter
 
+from src.auth_routes import auth_bp
+from src.core import QuartApp
 from src.database import DatabaseManager
 
 # Blueprint for email token verification
 from src.service import StorageService
 from src.storage import LocalFileStorage
 
-
-class QuartApp(Quart):
-    """A custom Quart application class with storage support.
-
-    This class extends Quart to include a storage attribute for handling
-    database operations and file storage.
-    """
-
-    storage: StorageService  # Define storage explicitly to stop pyright from complaining
-
-
 app = QuartApp(__name__)
 app.config["DB_PATH"] = "database.sqlite"
-
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+rate_limiter = RateLimiter(app)
 
 
 # Set up sqlite
@@ -95,6 +88,8 @@ def convert_datetime(val):
 
 aiosqlite.register_adapter(datetime, adapt_datetime)
 aiosqlite.register_converter("timestamp", convert_datetime)
+
+app.register_blueprint(auth_bp)
 
 
 @app.route("/users/<email>", methods=["POST"])

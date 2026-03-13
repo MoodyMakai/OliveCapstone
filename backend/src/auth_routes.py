@@ -45,13 +45,15 @@ import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 from functools import wraps
+from typing import cast
 
-from quart import g, jsonify, request
+from quart import Blueprint, current_app, g, jsonify, request
 
-from src.app import app
+from src.core import QuartApp
 from src.database_helpers import OTPRecord, hash_token, validate_email_format
 
 logger = logging.getLogger(__name__)
+auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
 async def send_email(email: str, otp: str):
@@ -64,12 +66,10 @@ async def send_email(email: str, otp: str):
         email (str): The recipient's email address
         otp (str): The one-time password to send
     """
-    # In production, this would send an actual email
-    # For now, we'll just log it for debugging purposes
     print(f"Send {otp} to {email}")
 
 
-@app.route("/auth/request-otp", methods=["POST"])
+@auth_bp.route("/request-otp", methods=["POST"])
 async def request_otp():
     """Request an OTP (One-Time Password) for email verification.
 
@@ -78,6 +78,7 @@ async def request_otp():
     Returns:
         tuple: JSON response indicating success or error
     """
+    app = cast(QuartApp, current_app)
     data = await request.get_json()
     email = data.get("email")
 
@@ -88,8 +89,6 @@ async def request_otp():
     if not validate_email_format(email):
         return jsonify({"error": "Invalid email format"}), 400
 
-    # TODO: Add rate limiting to prevent abuse
-    otp = "".join(str(secrets.randbelow(10)) for _ in range(6))
     # Check if user exists and is banned
     user = await app.storage.get_user(email=email)
     if user and user.banned:
@@ -101,11 +100,11 @@ async def request_otp():
     otp_record = OTPRecord(email=email, otp=otp, expires_at=expires_at)
     await app.storage.db.save_otp(otp_record)
 
-    await send_email(email, otp)
+    app.add_background_task(send_email, email, otp)
     return jsonify({"message": "OTP sent successfully"}), 200
 
 
-@app.route("/auth/verify-otp", methods=["POST"])
+@auth_bp.route("/auth/verify-otp", methods=["POST"])
 async def verify_otp():
     """Verify the OTP provided by the user.
 
@@ -115,6 +114,7 @@ async def verify_otp():
     Returns:
         tuple: JSON response with authentication status and token or error
     """
+    app = cast(QuartApp, current_app)
     data = await request.get_json()
     email = data.get("email")
     input_otp = data.get("otp")
@@ -126,9 +126,10 @@ async def verify_otp():
     if not validate_email_format(email):
         return jsonify({"error": "Invalid email format"}), 400
 
+    generic_error = "Invalid email or OTP"
     record = await app.storage.db.get_otp(email)
     if not record:
-        return jsonify({"error": "No OTP found for this email"}), 401
+        return jsonify({"error": generic_error}), 401
 
     expires_at = record.expires_at
     if datetime.now(tz=UTC) > expires_at:
@@ -136,7 +137,7 @@ async def verify_otp():
         return jsonify({"error": "OTP has expired"}), 401
 
     if record.otp != input_otp:
-        return jsonify({"error": "Invalid OTP"}), 401
+        return jsonify({"error": generic_error}), 401
 
     await app.storage.db.delete_otp(email)
 
@@ -169,6 +170,7 @@ def require_auth(f):
 
     @wraps(f)
     async def decorated_function(*args, **kwargs):
+        app = cast(QuartApp, current_app)
         auth_header = request.headers.get("Authorization")
 
         if not auth_header or not auth_header.startswith("Bearer "):
@@ -187,7 +189,11 @@ def require_auth(f):
 
         # Update token usage timestamp
         await app.storage.db.update_token_usage(hashed_token)
-        g.user_id = session.user_id
+
+        user = await app.storage.get_user(user_id=session.user_id)
+        if user is None:
+            return jsonify({"error": "The user does not exist"}), 401
+        g.user = user
 
         return await f(*args, **kwargs)
 
