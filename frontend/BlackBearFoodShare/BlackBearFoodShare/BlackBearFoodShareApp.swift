@@ -6,9 +6,13 @@
 //
 
 import SwiftUI
+import UIKit
 
 @main
 struct MyApp: App {
+
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     @StateObject var store = FoodshareStore()
 
     var body: some Scene {

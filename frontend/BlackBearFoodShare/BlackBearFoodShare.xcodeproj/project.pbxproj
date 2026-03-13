@@ -29,9 +29,22 @@
 		2E50A66C2ED5071700898367 /* BlackBearFoodShareUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BlackBearFoodShareUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0F8D58792F55DE2C00A1E68A /* Exceptions for "BlackBearFoodShare" folder in "BlackBearFoodShare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 2E50A6522ED5071600898367 /* BlackBearFoodShare */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		2E50A6552ED5071600898367 /* BlackBearFoodShare */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0F8D58792F55DE2C00A1E68A /* Exceptions for "BlackBearFoodShare" folder in "BlackBearFoodShare" target */,
+			);
 			path = BlackBearFoodShare;
 			sourceTree = "<group>";
 		};
