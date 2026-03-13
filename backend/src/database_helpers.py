@@ -54,6 +54,7 @@ class User:
     email: str
     verified: bool = False
     banned: bool = False
+    is_admin: bool = False
 
 
 @dataclass

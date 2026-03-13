@@ -200,3 +200,26 @@ def require_auth(f):
         return await f(*args, **kwargs)
 
     return decorated_function
+
+
+def require_admin(f):
+    """Decorator to require admin privileges for a route.
+
+    Checks if the user attached to Quart's global `g` object has the is_admin flag set to True.
+    MUST be stacked under the @require_auth decorator.
+    """
+
+    @wraps(f)
+    async def decorated_function(*args, **kwargs):
+        # Fetch the user from the global object (populated by @require_auth)
+        user = getattr(g, "user", None)
+
+        if not user:
+            return jsonify({"error": "Authentication required."}), 401
+
+        if not user.is_admin:
+            return jsonify({"error": "You do not have permission to access this resource."}), 403
+
+        return await f(*args, **kwargs)
+
+    return decorated_function

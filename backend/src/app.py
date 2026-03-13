@@ -44,7 +44,7 @@ from quart import g, request
 from quart.json import jsonify
 from quart_rate_limiter import RateLimiter
 
-from src.auth_routes import auth_bp, require_auth
+from src.auth_routes import auth_bp, require_admin, require_auth
 from src.core import QuartApp
 from src.database import DatabaseManager
 
@@ -269,6 +269,83 @@ async def close_foodshare():
     except Exception as e:
         logger.error(f"Unexpected error in close_foodshare: {str(e)}", exc_info=True)
         return jsonify({"error": "Internal server error occurred while closing foodshare"}), 500
+
+
+@app.route("/surveys", methods=["POST"])
+@require_auth
+async def submit_survey():
+    """Submit a new survey response.
+
+    Expects a JSON payload with 'num_participants' and 'experience'.
+    'other_thoughts' and 'foodshare_fk_id' are optional.
+
+    Returns:
+        tuple: JSON response with success message and survey ID or error message
+    """
+    try:
+        data = await request.get_json()
+        if not data:
+            return jsonify({"error": "Missing JSON payload"}), 400
+
+        # Check for required fields
+        if "num_participants" not in data or "experience" not in data:
+            return jsonify({"error": "Missing required fields: 'num_participants' and 'experience'"}), 400
+
+        # Type-cast and validate required fields
+        try:
+            num_participants = int(data["num_participants"])
+            experience = int(data["experience"])
+        except ValueError:
+            return jsonify({"error": "'num_participants' and 'experience' must be integers"}), 400
+
+        # Handle optional fields
+        other_thoughts = str(data.get("other_thoughts", ""))
+
+        foodshare_fk_id = data.get("foodshare_fk_id")
+        if foodshare_fk_id is not None:
+            try:
+                foodshare_fk_id = int(foodshare_fk_id)
+            except ValueError:
+                return jsonify({"error": "'foodshare_fk_id' must be an integer"}), 400
+
+        # Save to the database
+        survey_id = await app.storage.db.add_survey(
+            num_participants=num_participants,
+            experience=experience,
+            other_thoughts=other_thoughts,
+            foodshare_fk_id=foodshare_fk_id,
+        )
+
+        if survey_id:
+            logger.info(f"User {g.user.user_id} successfully submitted survey ID: {survey_id}")
+            return jsonify({"success": True, "survey_id": survey_id}), 201
+
+        logger.error("Database returned None when creating survey.")
+        return jsonify({"error": "Failed to submit survey"}), 500
+
+    except Exception as e:
+        logger.error(f"Unexpected error in submit_survey: {str(e)}", exc_info=True)
+        return jsonify({"error": "Internal server error occurred while submitting survey"}), 500
+
+
+@app.route("/surveys", methods=["GET"])
+@require_auth
+@require_admin
+async def get_all_surveys():
+    """Retrieve all surveys from the database.
+
+    Returns:
+        tuple: JSON response with list of all surveys or error message
+    """
+    try:
+        surveys = await app.storage.db.get_all_surveys()
+        surveys_dict = [asdict(survey) for survey in surveys]
+
+        return jsonify(surveys_dict), 200
+
+    except Exception as e:
+        logger.error(f"Unexpected error in get_all_surveys: {str(e)}", exc_info=True)
+        return jsonify({"error": "Internal server error occurred while retrieving surveys"}), 500
 
 
 # runs before startup

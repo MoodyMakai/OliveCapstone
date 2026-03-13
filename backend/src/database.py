@@ -73,7 +73,7 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseManager:
-    """Manages database connections and operations for the foodsharing application.
+    """Manages database connections and operations for the food sharing application.
 
     This class handles all database interactions including user management,
     foodshare listings, picture storage, and authentication tokens.
@@ -200,6 +200,7 @@ class DatabaseManager:
                     email=row["email"],
                     verified=bool(row["verified"]),
                     banned=bool(row["banned"]),
+                    is_admin=bool(row["is_admin"]),
                 )
                 logger.debug(f"User retrieved successfully: {user_id}")
                 return user

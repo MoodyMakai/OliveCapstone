@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     verified INTEGER DEFAULT 0,
-    banned INTEGER DEFAULT 0
+    banned INTEGER DEFAULT 0,
+    is_admin INTEGER DEFAULT 0
 );
 
 -- Device tokens table
