@@ -184,7 +184,6 @@ def sanitize_string(input_str: str) -> str:
     if not isinstance(input_str, str):
         return ""
 
-    # Remove potentially dangerous characters and sequences
     sanitized = input_str.strip()
 
     # Limit length to prevent overly long inputs

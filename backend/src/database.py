@@ -4,7 +4,7 @@ This module provides a comprehensive database interface using SQLite with async 
 It handles all database operations for users, foodshares, pictures, OTPs, sessions, and surveys.
 
 The DatabaseManager class manages:
-- Connection lifecycle (connect, close)
+- Connection life cycle (connect, close)
 - Table initialization and schema management
 - User management operations
 - Foodshare and picture handling

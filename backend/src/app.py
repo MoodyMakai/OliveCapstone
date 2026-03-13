@@ -40,7 +40,7 @@ from dataclasses import asdict
 from datetime import datetime
 
 import aiosqlite
-from quart import request
+from quart import g, request
 from quart.json import jsonify
 from quart_rate_limiter import RateLimiter
 
@@ -92,9 +92,9 @@ aiosqlite.register_converter("timestamp", convert_datetime)
 app.register_blueprint(auth_bp)
 
 
-@app.route("/users/<email>", methods=["POST"])
+@app.route("/users", methods=["POST"])
 async def create_user():
-    """Create a new user with the given email.
+    """Create a new user with the given email in the JSON payload.
 
     Returns:
         tuple: JSON response with success message and user ID or error message
@@ -109,8 +109,10 @@ async def create_user():
         if user_id is None:
             logger.warning(f"Failed to register user with email: {data['email']}")
             return jsonify({"error": "Invalid email address."}), 400
+
         logger.info(f"Successfully created user with ID: {user_id}")
         return jsonify({"message": "User successfully created.", "user_id": user_id}), 201
+
     except Exception as e:
         logger.error(f"Error creating user: {str(e)}", exc_info=True)
         if "UNIQUE" in str(e).upper():
@@ -143,8 +145,10 @@ async def add_foodshare():
     """
     form = await request.form
     files = await request.files
+
     if not form or not files:
-        return jsonify({"error": "Missing form data"}), 400
+        return jsonify({"error": "Missing form data or files"}), 400
+
     picture = files.get("picture")
     if not picture:
         return jsonify({"error": "Missing picture file"}), 400
@@ -152,17 +156,15 @@ async def add_foodshare():
     try:
         name = form.get("name")
         location = form.get("location")
+
+        if not name or not location:
+            logger.warning("Missing name or location in add_foodshare request")
+            return jsonify({"error": "Name and location are required."}), 400
+
         ends = datetime.fromisoformat(str(form.get("ends")))
         active = form.get("active", "true").lower() == "true"
-        user_id = form.get("user_id")
-        if user_id is None:
-            logger.warning("Missing user_id in add_foodshare request")
-            raise TypeError
-        else:
-            try:
-                user_id = int(user_id)
-            except ValueError:
-                return jsonify({"error": "Invalid user ID format"}), 400
+
+        user_id = g.user.user_id
 
         picture_expires = datetime.fromisoformat(str(form.get("picture_expires")))
 
@@ -178,12 +180,8 @@ async def add_foodshare():
         allowed_extensions = {"jpg", "jpeg", "png", "gif"}
         if extension not in allowed_extensions:
             logger.warning(f"Invalid file extension: {extension}")
-            return jsonify(
-                {
-                    "error": """Invalid file type. Only JPG, JPEG, PNG,
-                    and GIF files are allowed."""
-                }
-            ), 400
+            # Fixed the multiline string issue
+            return jsonify({"error": "Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed."}), 400
 
         # Validate MIME type based on extension
         mime_type, _ = mimetypes.guess_type(picture.filename)
@@ -199,10 +197,7 @@ async def add_foodshare():
             return jsonify({"error": "File too large. Maximum file size is 10MB."}), 400
         picture.stream.seek(0)  # Reset stream position
 
-        if name is None or location is None:
-            logger.warning("Missing name or location in add_foodshare request")
-            raise TypeError
-
+        # Create the foodshare
         foodshare_id = await app.storage.create_foodshare_with_picture(
             name=name,
             location=location,
@@ -216,17 +211,64 @@ async def add_foodshare():
         )
 
         if foodshare_id:
-            logger.info(f"Successfully created foodshare with ID: {foodshare_id}")
+            logger.info(f"Successfully created foodshare ID {foodshare_id} by user {user_id}")
             return jsonify({"success": True, "foodshare_id": foodshare_id}), 201
+
         logger.error("Failed to create foodshare in database")
         return jsonify({"error": "Failed to create foodshare"}), 500
 
-    except (ValueError, TypeError) as e:
-        logger.warning(f"Invalid data format in add_foodshare: {str(e)}")
-        return jsonify({"error": f"Invalid data format: {str(e)}"}), 400
+    except ValueError as e:
+        logger.warning(f"Invalid date format in add_foodshare: {str(e)}")
+        return jsonify({"error": "Invalid date format. Please use ISO format for dates."}), 400
     except Exception as e:
         logger.error(f"Unexpected error in add_foodshare: {str(e)}", exc_info=True)
         return jsonify({"error": "Internal server error occurred while creating foodshare"}), 500
+
+
+@app.route("/foodshares/close", methods=["POST"])
+@require_auth
+async def close_foodshare():
+    """Closes a foodshare.
+
+    Validates the user, ensures they are the creator of the foodshare,
+    and sets the foodshare to inactive.
+
+    Returns:
+        tuple: JSON response with success message and foodshare ID or error message
+    """
+    try:
+        data = await request.get_json()
+
+        if not data or "foodshare_id" not in data:
+            return jsonify({"error": "Missing 'foodshare_id' in request body"}), 400
+
+        try:
+            target_id = int(data["foodshare_id"])
+        except ValueError:
+            return jsonify({"error": "'foodshare_id' must be an integer"}), 400
+
+        user = g.user
+
+        foodshare = await app.storage.db.get_foodshare(target_id)
+
+        if not foodshare:
+            return jsonify({"error": "Foodshare not found"}), 404
+
+        if not foodshare.creator or foodshare.creator.user_id != user.user_id:
+            logger.warning(f"User {user.user_id} attempted to close foodshare {target_id} owned by someone else.")
+            return jsonify({"error": "You do not have permission to close this foodshare"}), 403
+
+        closed_id = await app.storage.db.deactivate_foodshare(target_id)
+
+        if closed_id:
+            logger.info(f"User {user.user_id} successfully closed foodshare with ID: {closed_id}")
+            return jsonify({"success": True, "foodshare_id": closed_id}), 200
+
+        return jsonify({"error": "Failed to close foodshare"}), 500
+
+    except Exception as e:
+        logger.error(f"Unexpected error in close_foodshare: {str(e)}", exc_info=True)
+        return jsonify({"error": "Internal server error occurred while closing foodshare"}), 500
 
 
 # runs before startup
