@@ -562,6 +562,29 @@ class DatabaseManager:
             logger.error(f"Failed to get all active foodshares: {str(e)}", exc_info=True)
             raise
 
+    async def deactivate_foodshare(self, foodshare_id: int) -> int | None:
+        """Sets foodshare status to inactive.
+
+        Args:
+            foodshare_id (int): The ID of the foodshare to deactivate.
+
+        Returns:
+            int | None: The row ID of the updated foodshare.
+
+        Raises:
+            Exception: If database operation fails.
+        """
+        try:
+            query = "UPDATE foodshares SET active = 0 WHERE foodshare_id = ?"
+            cursor = await self.conn.execute(query, (foodshare_id,))
+            await self.conn.commit()
+            updated_id = cursor.lastrowid
+            logger.info(f"Survey added successfully with ID: {updated_id}")
+            return updated_id
+        except Exception as e:
+            logger.error(f"Failed to deactivate foodshare {foodshare_id}: {str(e)}", exc_info=True)
+            raise
+
     # Survey CRUD
 
     async def add_survey(

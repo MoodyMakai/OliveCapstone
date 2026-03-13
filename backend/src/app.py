@@ -44,7 +44,7 @@ from quart import request
 from quart.json import jsonify
 from quart_rate_limiter import RateLimiter
 
-from src.auth_routes import auth_bp
+from src.auth_routes import auth_bp, require_auth
 from src.core import QuartApp
 from src.database import DatabaseManager
 
@@ -119,6 +119,7 @@ async def create_user():
 
 
 @app.route("/foodshares", methods=["GET"])
+@require_auth
 async def get_all_active_foodshares():
     """Retrieve all active foodshares from the database.
 
@@ -131,6 +132,7 @@ async def get_all_active_foodshares():
 
 
 @app.route("/foodshares", methods=["POST"])
+@require_auth
 async def add_foodshare():
     """Add a new foodshare with associated picture.
 
@@ -143,7 +145,6 @@ async def add_foodshare():
     files = await request.files
     if not form or not files:
         return jsonify({"error": "Missing form data"}), 400
-
     picture = files.get("picture")
     if not picture:
         return jsonify({"error": "Missing picture file"}), 400
@@ -238,7 +239,7 @@ async def startup():
     Raises:
         Exception: If there's an error during application initialization
     """
-    # Add the database manager to the app
+    # Add the storage service to the app
     try:
         db = DatabaseManager(db_path=app.config["DB_PATH"])
         await db.connect()
