@@ -1,5 +1,4 @@
 import datetime
-import re
 
 from src.database_helpers import (
     DeviceSession,
