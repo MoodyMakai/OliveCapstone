@@ -312,7 +312,6 @@ class DatabaseManager:
             logger.error(f"Failed to update user status for user {user_id}: {str(e)}", exc_info=True)
             raise
 
-    # aiosqlite is expecting a tuple, but is recieving an int
     async def delete_user_by_id(self, user_id: int):
         """Delete a user by their ID.
 
@@ -480,6 +479,56 @@ class DatabaseManager:
         """
         await self.conn.execute(query, (foodshare_id, restriction_id))
         await self.conn.commit()
+
+    async def get_or_create_restriction(self, label: str) -> int | None:
+        """Get the ID of a restriction by its label, creating it if it doesn't exist.
+
+        Args:
+        label (str): The name/label of the restriction (e.g., 'Vegan', 'Nut-Free')
+
+        Returns:
+        int: The ID of the restriction
+
+        Raises:
+        Exception: If database operation fails
+        """
+        try:
+            # First, try to find the existing restriction
+            cursor = await self.conn.execute("SELECT restriction_id FROM restrictions WHERE label = ?", (label,))
+            row = await cursor.fetchone()
+
+            if row:
+                return row["restriction_id"]
+
+            # If it doesn't exist, insert it
+            cursor = await self.conn.execute("INSERT INTO restrictions (label) VALUES (?)", (label,))
+            await self.conn.commit()
+            logger.info(f"Created new restriction '{label}' with ID: {cursor.lastrowid}")
+            return cursor.lastrowid
+        except Exception as e:
+            logger.error(f"Failed to get/create restriction '{label}': {str(e)}", exc_info=True)
+            raise
+
+    async def add_restriction_to_foodshare_by_name(self, foodshare_id: int, label: str) -> None:
+        """Link a foodshare with a restriction using the restriction's name.
+
+        Args:
+          foodshare_id (int): The ID of the foodshare
+          label (str): The name/label of the restriction to link
+
+        Raises:
+          Exception: If database operation fails
+        """
+        try:
+            restriction_id = await self.get_or_create_restriction(label)
+            if restriction_id is None:
+                raise
+
+            await self.link_foodshare_restriction(foodshare_id, restriction_id)
+            logger.info(f"Successfully linked restriction '{label}' to foodshare {foodshare_id}")
+        except Exception as e:
+            logger.error(f"Failed to link restriction '{label}' to foodshare {foodshare_id}: {str(e)}", exc_info=True)
+            raise
 
     async def get_foodshare(self, foodshare_id: int) -> Foodshare | None:
         """Retrieve a foodshare by its ID.
