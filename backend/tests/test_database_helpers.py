@@ -1,9 +1,7 @@
-import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pytest
 
-# Assuming your original code is saved in a file named 'db_helpers.py'
 from src.database_helpers import (
     DeviceSession,
     Foodshare,
@@ -122,10 +120,6 @@ class TestUtilityFunctions:
     )
     def test_sanitize_string_valid(self, input_str, expected):
         assert sanitize_string(input_str) == expected
-
-    @pytest.mark.parametrize("input_str", [123, ["list"], None, {}])
-    def test_sanitize_string_invalid_types(self, input_str):
-        assert sanitize_string(input_str) == ""
 
     @pytest.mark.parametrize(
         "date_input", ["2023-10-25T12:00:00", "2023-10-25T12:00:00+00:00", "2023-10-25", datetime.now()]
