@@ -11,8 +11,8 @@ async def fixture_test_app():
     # Configure to use an in memory database
     app.config["DB_PATH"] = ":memory:"
 
-    async with app.test_app() as test_client:
-        yield test_client
+    async with app.test_app() as test_app:
+        yield test_app
     await app.shutdown()
 
 

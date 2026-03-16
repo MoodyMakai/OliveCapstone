@@ -61,6 +61,12 @@ CREATE TABLE IF NOT EXISTS surveys (
     foodshare_fk_id INTEGER REFERENCES foodshares(foodshare_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS otp_codes (
+    email TEXT PRIMARY KEY,
+    otp TEXT NOT NULL,
+    expires_at DATETIME NOT NULL
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_foodshares_user_fk ON foodshares(user_fk_id);
 CREATE INDEX IF NOT EXISTS idx_foodshares_active ON foodshares(active);

@@ -132,7 +132,6 @@ class TestUtilityFunctions:
         # We need to expect exceptions for invalid types
         assert validate_datetime_format(date_input) is False
 
-    # --- hash_token ---
     def test_hash_token_consistency(self):
         token = "my_secret_token"
         assert hash_token(token) == hash_token(token)
@@ -149,7 +148,6 @@ class TestUtilityFunctions:
         empty_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         assert hash_token("") == empty_hash
 
-    # --- generate_secure_token ---
     def test_generate_secure_token_length(self):
         token = generate_secure_token()
         assert isinstance(token, str)

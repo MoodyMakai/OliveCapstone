@@ -257,8 +257,8 @@ class DatabaseManager:
         try:
             query = """
             SELECT u.user_id, u.email, u.verified, u.banned
-            FROM device_tokens t, users u
-            JOIN users u ON u.user_id = t.user_id
+            FROM users u
+            JOIN device_tokens t ON u.user_id = t.user_id
             WHERE t.token_hash = ?
             """
             async with self.conn.execute(query, (token,)) as cursor:
