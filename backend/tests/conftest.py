@@ -36,3 +36,13 @@ async def storage_service(db_manager: DatabaseManager, tmp_path):
     service = StorageService(db=db_manager, storage=storage)
     yield service
     await service.close()
+
+
+@pytest.fixture
+def temp_upload_dir(tmp_path):
+    return str(tmp_path / "uploads")
+
+
+@pytest.fixture
+def storage(temp_upload_dir):
+    return LocalFileStorage(temp_upload_dir)
