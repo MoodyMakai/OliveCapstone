@@ -128,7 +128,7 @@ async def get_all_active_foodshares():
     Returns:
         tuple: JSON response with list of active foodshares or error message
     """
-    foodshares = await app.storage.list_active_foodshares()
+    foodshares = await app.storage.db.get_all_active_foodshares()
     foodshares = [asdict(f) for f in foodshares]
     return jsonify(foodshares), 200
 

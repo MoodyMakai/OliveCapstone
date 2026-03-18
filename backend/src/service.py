@@ -38,8 +38,6 @@ from datetime import datetime
 
 from src.database import DatabaseManager
 from src.database_helpers import (
-    Foodshare,
-    Survey,
     User,
     sanitize_string,
     validate_datetime_format,
@@ -139,11 +137,13 @@ class StorageService:
         extension: str,
         mimetype: str,
         picture_expires: datetime,
+        restrictions: list[str] | None = None,
     ) -> int | None:
-        """Create a new foodshare with an associated picture.
+        """Create a new foodshare with an associated picture and optional restrictions.
 
         This method creates a new foodshare entry in the database, including
-        uploading and associating a picture with it.
+        uploading and associating a picture with it, and linking any provided
+        dietary restrictions.
 
         Args:
             name (str): The name of the foodshare
@@ -155,6 +155,7 @@ class StorageService:
             extension (str): The file extension of the picture
             mimetype (str): The MIME type of the picture
             picture_expires (datetime): The expiration date/time for the picture
+            restrictions (list[str] | None): A list of restriction labels (e.g., ['Vegan', 'Nut-Free'])
 
         Returns:
             int | None: The ID of the created foodshare, or None if failed
@@ -187,6 +188,12 @@ class StorageService:
             user_fk_id=user_id,
             picture_fk_id=picture_id,
         )
+
+        # If foodshare was successfully created, link any provided restrictions
+        if foodshare_id and restrictions:
+            for restriction in restrictions:
+                await self.db.add_restriction_to_foodshare_by_name(foodshare_id, restriction)
+
         return foodshare_id
 
     async def register_user(self, email: str) -> int | None:
@@ -239,14 +246,6 @@ class StorageService:
         """
         await self.db.update_user_status(user_id, True)
 
-    async def list_active_foodshares(self) -> list[Foodshare]:
-        """Retrieve all active foodshares from the database.
-
-        Returns:
-            list[Foodshare]: A list of active Foodshare objects
-        """
-        return await self.db.get_all_active_foodshares()
-
     async def delete_foodshare(self, foodshare_id: int) -> bool:
         """Delete a foodshare and its associated picture.
 
@@ -260,49 +259,17 @@ class StorageService:
         if not foodshare:
             return False
 
+        # Handle file and picture record deletion
         if foodshare.picture:
+            # Delete physical file
             await self.storage.delete(foodshare.picture.filepath)
-            await self.db.conn.execute(
-                "DELETE FROM pictures WHERE picture_id = ?",
-                (foodshare.picture.picture_id,),
-            )
+            # Delete database record
+            await self.db.delete_picture(foodshare.picture.picture_id)
 
-        await self.db.conn.execute("DELETE FROM foodshare_restrictions WHERE foodshare_id = ?", (foodshare_id,))
+        # Handle foodshare dependencies (restrictions)
+        await self.db.delete_foodshare_restrictions(foodshare_id)
 
-        await self.db.conn.execute("DELETE FROM foodshares WHERE foodshare_id = ?", (foodshare_id,))
-        await self.db.conn.commit()
+        # Handle the foodshare record itself
+        await self.db.delete_foodshare_record(foodshare_id)
 
         return True
-
-    async def submit_survey(
-        self,
-        num_participants: int,
-        experience: int,
-        other_thoughts: str,
-        foodshare_id: int | None = None,
-    ) -> int | None:
-        """Submit a survey response.
-
-        Args:
-            num_participants (int): Number of participants in the foodshare
-            experience (int): User's experience rating
-            other_thoughts (str): Additional thoughts from the user
-            foodshare_id (int | None): The ID of the foodshare being surveyed, if applicable
-
-        Returns:
-            int | None: The ID of the created survey, or None if failed
-        """
-        return await self.db.add_survey(
-            num_participants=num_participants,
-            experience=experience,
-            other_thoughts=other_thoughts,
-            foodshare_fk_id=foodshare_id,
-        )
-
-    async def list_all_surveys(self) -> list[Survey]:
-        """Retrieve all survey responses from the database.
-
-        Returns:
-            list[Survey]: A list of all Survey objects
-        """
-        return await self.db.get_all_surveys()
