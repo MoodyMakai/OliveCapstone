@@ -79,10 +79,12 @@ class DeviceSession:
     Attributes:
         user_id (int): ID of the user associated with the session
         banned (int): Whether the user is banned (0 = not banned, 1 = banned)
+        last_used (datetime): When the session token was last used
     """
 
     user_id: int
     banned: int
+    last_used: datetime
 
 
 @dataclass
@@ -174,25 +176,15 @@ def validate_email_format(email: str) -> bool:
 
 
 def sanitize_string(input_str: str) -> str:
-    """Sanitize input string to prevent injection attacks.
+    """Sanitize input string by stripping whitespace and truncating.
 
     Args:
         input_str (str): The input string to sanitize
 
     Returns:
-        str: The sanitized string, truncated at 500 characters if necessary
+        str: The sanitized string, truncated at 500 characters
     """
     sanitized = input_str.strip()
-
-    # Remove common SQL keywords and commands that could be used for injection
-    sql_keywords = [
-        r"\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|CASE)\b",
-        r"\b(OR|AND)\s+1=1\b",
-        r"\b(OR|AND)\s+\'[^\']*\'\s*=\s*\'[^\']*\'",
-    ]
-
-    for pattern in sql_keywords:
-        sanitized = re.sub(pattern, "", sanitized, flags=re.IGNORECASE)
 
     # Limit length to prevent overly long inputs
     return sanitized[:500]

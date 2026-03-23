@@ -557,16 +557,17 @@ class DatabaseManager:
             raise
 
     async def get_all_active_foodshares(self) -> list[Foodshare]:
-        """Retrieve all active foodshares from the database.
+        """Retrieve all currently active foodshares from the database.
+
+        Filters for foodshares that are marked as active and have an end time
+        in the future (based on UTC).
 
         Returns:
             list[Foodshare]: List of all active Foodshare objects
-
-        Raises:
-            Exception: If database operation fails
         """
         try:
-            query = "SELECT foodshare_id FROM foodshares WHERE active = 1"
+            # Filter by active flag AND ensure the event hasn't ended yet
+            query = "SELECT foodshare_id FROM foodshares WHERE active = 1 AND ends > CURRENT_TIMESTAMP"
             async with self.conn.execute(query) as cursor:
                 rows = await cursor.fetchall()
 
@@ -848,14 +849,19 @@ class DatabaseManager:
         try:
             async with self.conn.cursor() as cursor:
                 query = """
-                    SELECT d.user_id, u.banned
+                    SELECT d.user_id, u.banned, d.last_used
                     FROM device_tokens d
                     JOIN users u ON d.user_id = u.user_id
                     WHERE d.token_hash = ?
                 """
                 await cursor.execute(query, (token_hash,))
                 row = await cursor.fetchone()
-                session = DeviceSession(**dict(row)) if row else None
+                if row:
+                    row_dict = dict(row)
+                    row_dict["last_used"] = datetime.fromisoformat(row_dict["last_used"])
+                    session = DeviceSession(**row_dict)
+                else:
+                    session = None
                 if session:
                     logger.debug("Device session retrieved successfully")
                 else:

@@ -105,7 +105,7 @@ async def request_otp():
     return jsonify({"message": "OTP sent successfully"}), 200
 
 
-@auth_bp.route("/auth/verify-otp", methods=["POST"])
+@auth_bp.route("/verify-otp", methods=["POST"])
 @rate_limit(5, timedelta(minutes=1))
 async def verify_otp():
     """Verify the OTP provided by the user.
@@ -185,6 +185,10 @@ def require_auth(f):
 
         if not session:
             return jsonify({"error": "Invalid or expired token"}), 401
+
+        now = datetime.now(tz=UTC).replace(tzinfo=None)
+        if now - session.last_used > timedelta(days=30):
+            return jsonify({"error": "Session expired. Please log in again."}), 401
 
         if session.banned:
             return jsonify({"error": "This account is banned."}), 403

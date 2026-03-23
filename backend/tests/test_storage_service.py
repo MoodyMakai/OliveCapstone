@@ -37,12 +37,16 @@ async def test_storage_service_saves_file_and_metadata(storage_service: StorageS
 
     assert picture_id is not None
 
+    import os
+
     db_picture = await storage_service.db.get_picture(picture_id)
     assert db_picture is not None
     assert db_picture.mimetype == "image/png"
 
-    assert anyio.Path(db_picture.filepath).exists
+    # Resolve the local physical path from URI
+    local_path = os.path.join(storage_service.storage.upload_folder, os.path.basename(db_picture.filepath))
+    assert anyio.Path(local_path).exists
 
-    async with aiofiles.open(db_picture.filepath, "rb") as f:
+    async with aiofiles.open(local_path, "rb") as f:
         saved_bytes = await f.read()
     assert saved_bytes == dummy_file_stream
