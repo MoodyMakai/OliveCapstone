@@ -52,6 +52,22 @@ from quart_rate_limiter import rate_limit
 from src.core import QuartApp
 from src.database_helpers import OTPRecord, hash_token, validate_email_format
 
+
+def conditional_rate_limit(limit: int, period: timedelta):
+    """Apply rate limit only if TESTING is not True in app config."""
+
+    def decorator(f):
+        @wraps(f)
+        async def decorated_function(*args, **kwargs):
+            if current_app.config.get("TESTING"):
+                return await f(*args, **kwargs)
+            return await rate_limit(limit, period)(f)(*args, **kwargs)
+
+        return decorated_function
+
+    return decorator
+
+
 logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -70,7 +86,7 @@ async def send_email(email: str, otp: str):
 
 
 @auth_bp.route("/request-otp", methods=["POST"])
-@rate_limit(3, timedelta(minutes=10))
+@conditional_rate_limit(3, timedelta(minutes=10))
 async def request_otp():
     """Request an OTP (One-Time Password) for email verification.
 
@@ -106,7 +122,7 @@ async def request_otp():
 
 
 @auth_bp.route("/verify-otp", methods=["POST"])
-@rate_limit(5, timedelta(minutes=1))
+@conditional_rate_limit(5, timedelta(minutes=1))
 async def verify_otp():
     """Verify the OTP provided by the user.
 

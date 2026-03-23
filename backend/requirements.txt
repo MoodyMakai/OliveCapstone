@@ -6,3 +6,5 @@ pytest
 pytest-asyncio
 anyio
 itsdangerous
+Pillow
+aiofiles

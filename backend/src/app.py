@@ -58,7 +58,9 @@ app.config["DB_PATH"] = "database.sqlite"
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-rate_limiter = RateLimiter(app)
+# Initialize RateLimiter only if not in testing mode to avoid global state issues in tests
+if not app.config.get("TESTING"):
+    rate_limiter = RateLimiter(app)
 
 
 # Set up sqlite
@@ -146,7 +148,7 @@ async def add_foodshare():
     form = await request.form
     files = await request.files
 
-    if not form or not files:
+    if not form and not files:
         return jsonify({"error": "Missing form data or files"}), 400
 
     picture = files.get("picture")
@@ -173,18 +175,11 @@ async def add_foodshare():
             logger.warning("Missing filename in add_foodshare request")
             return jsonify({"error": "Invalid filename"}), 400
 
-        # Extract extension and validate it
+        # Extract original metadata (extension and mimetype are updated during processing)
         extension = picture.filename.split(".")[-1].lower() if "." in picture.filename else "bin"
-
-        # Whitelist allowed file extensions
-        allowed_extensions = {"jpg", "jpeg", "png", "gif"}
-        if extension not in allowed_extensions:
-            logger.warning(f"Invalid file extension: {extension}")
-            # Fixed the multiline string issue
-            return jsonify({"error": "Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed."}), 400
-
-        # Validate MIME type based on extension
         mime_type, _ = mimetypes.guess_type(picture.filename)
+
+        # Basic mime check to ensure it's an image
         if not mime_type or not mime_type.startswith("image/"):
             logger.warning(f"Invalid MIME type for file: {picture.filename}")
             return jsonify({"error": "Invalid file type. Please upload an image file."}), 400
@@ -197,14 +192,14 @@ async def add_foodshare():
             return jsonify({"error": "File too large. Maximum file size is 10MB."}), 400
         picture.stream.seek(0)  # Reset stream position
 
-        # Create the foodshare
+        # Create the foodshare (processing handles conversion to optimized WebP)
         foodshare_id = await app.storage.create_foodshare_with_picture(
             name=name,
             location=location,
             ends=ends,
             active=active,
             user_id=user_id,
-            file_stream=picture.stream,
+            file_stream=picture.read(),  # Read the full stream for Pillow
             extension=extension,
             mimetype=mime_type,
             picture_expires=picture_expires,
@@ -363,7 +358,8 @@ async def startup():
         db = DatabaseManager(db_path=app.config["DB_PATH"])
         await db.connect()
         await db.init_tables()
-        local_file_store = LocalFileStorage("images")
+        upload_folder = app.config.get("UPLOAD_FOLDER", "images")
+        local_file_store = LocalFileStorage(upload_folder)
         app.storage = StorageService(db, local_file_store)
         logger.info("Application started successfully")
     except Exception as e:

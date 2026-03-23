@@ -40,9 +40,13 @@ class AuthClient:
 
 
 @pytest.fixture(name="test_app", scope="function")
-async def fixture_test_app():
+async def fixture_test_app(tmp_path):
     # Configure to use an in memory database
     quart_app.config["DB_PATH"] = ":memory:"
+    # Disable rate limiting for tests via TESTING flag
+    quart_app.config["TESTING"] = True
+    # Use a temporary directory for images during tests
+    quart_app.config["UPLOAD_FOLDER"] = str(tmp_path / "images")
 
     async with quart_app.test_app() as test_app:
         yield test_app
