@@ -11,6 +11,11 @@ struct FoodshareListView: View {
     @EnvironmentObject var store: FoodshareStore
     @State private var showingCreate = false
     @State private var activeFilter: DietaryRestriction? = nil
+    
+    // temp auth logic
+    private var isApprovedUser: Bool {
+        true
+    }
 
     // Computed property to filter the list dynamically
     var filteredItems: [FoodshareItem] {
@@ -23,12 +28,23 @@ struct FoodshareListView: View {
     var body: some View {
         NavigationView {
             List(filteredItems) { item in
-                NavigationLink(destination: Text("Detail View for \(item.name)")) {
+                
+                NavigationLink(
+                    destination: FoodshareItemView(
+                        item: item,
+                        isApprovedUser: isApprovedUser,
+                        onDelete: {
+                            delete(item)
+                        }
+                    )
+                ) {
                     FoodshareRow(item: item)
                 }
             }
             .navigationTitle("Foodshare")
             .toolbar {
+                
+
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
                         Button("All Restrictions") { activeFilter = nil }
@@ -39,10 +55,13 @@ struct FoodshareListView: View {
                             }
                         }
                     } label: {
-                        Label("Filter", systemImage: activeFilter == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+                        Label(
+                            "Filter",
+                            systemImage: activeFilter == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
                     }
                 }
 
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingCreate = true }) {
                         Image(systemName: "plus")
@@ -52,20 +71,18 @@ struct FoodshareListView: View {
             }
             .sheet(isPresented: $showingCreate) {
                 FoodShareCreationView()
+                    .environmentObject(store)
             }
         }
     }
-}
-
-struct SDataWrapper {
-    var store: FoodshareStore
-    var foodshareItems: [FoodshareItem] {
-        get { store.items }
-        set { store.items = newValue }
+    
+    // MMB deletion
+    private func delete(_ item: FoodshareItem) {
+        store.items.removeAll { $0.id == item.id }
     }
 }
 
-
 #Preview {
-    FoodshareListView().environmentObject(FoodshareStore())
+    FoodshareListView()
+        .environmentObject(FoodshareStore())
 }
