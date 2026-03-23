@@ -1,57 +1,27 @@
-"""Database management module for the Foodshare backend.
+"""Foodshare Backend Database Management Module.
 
-This module provides a comprehensive database interface using SQLite with async support.
-It handles all database operations for users, foodshares, pictures, OTPs, sessions, and surveys.
+Provides a comprehensive, asynchronous SQLite interface for the Foodshare backend
+using `aiosqlite`. This module manages the complete lifecycle of database connections,
+schema initialization, and CRUD operations across all core entities.
 
-The DatabaseManager class manages:
-- Connection life cycle (connect, close)
-- Table initialization and schema management
-- User management operations
-- Foodshare and picture handling
-- OTP storage and retrieval
-- Session token management
-- Survey data operations
+Key Functional Domains:
+    * User Management: Account creation, retrieval, status updates (banning), and deletion.
+    * Authentication: Device session token creation, usage tracking, and OTP lifecycle for email verification.
+    * Foodshares: Creation, retrieval, deactivation, and linking dietary/allergy restrictions.
+    * Media Handling: Storage of picture metadata and automated cleanup of expired images.
+    * Feedback: Survey data collection and aggregation.
 
-Key features:
-- Async SQLite database operations using aiosqlite
-- Automatic datetime conversion for database storage
-- Comprehensive CRUD operations for all entities
-- Session token validation and usage tracking
-- OTP expiration and cleanup
-- Banned user account handling
-- Picture expiration management
+Technical Details:
+    * Powered by `aiosqlite` for non-blocking database I/O.
+    * Enforces data integrity using SQLite PRAGMAs (WAL journal mode, foreign keys ON).
+    * Entity models are strictly typed using dataclasses/Pydantic models from `src.database_helpers`.
 
-Classes:
-    DatabaseManager: Main class for database operations with async methods
-
-Methods:
-    connect: Establish database connection
-    close: Close database connection
-    init_tables: Initialize all required database tables
-    add_user: Create a new user record
-    get_user: Retrieve user by ID
-    get_user_by_email: Retrieve user by email address
-    get_user_by_token: Retrieve user associated with a token
-    update_user_status: Update user account status (banned/active)
-    delete_user_by_id: Remove user by ID
-    add_picture: Store picture metadata
-    get_picture: Retrieve picture by ID
-    delete_expired_pictures: Remove expired pictures from database
-    add_foodshare: Create new foodshare record
-    link_foodshare_restriction: Associate restrictions with foodshares
-    get_foodshare: Retrieve specific foodshare
-    get_all_active_foodshares: Fetch all currently active foodshares
-    add_survey: Store survey data
-    get_survey: Retrieve specific survey
-    get_all_surveys: Fetch all surveys
-    reset_token_lifetime: Reset token expiration time
-    save_otp: Store OTP for email verification
-    get_otp: Retrieve stored OTP for email verification
-    delete_otp: Remove expired or used OTP
-    create_device_token: Create new session token for user
-    get_session_by_token: Retrieve session by token
-    update_token_usage: Update token usage timestamp
-    create_or_verify_user: Create new user or verify existing one
+Usage:
+    db = DatabaseManager("path/to/database.sqlite")
+    await db.connect()
+    await db.init_tables()
+    user = await db.get_user_by_email("user@example.com")
+    await db.close()
 """
 
 import logging
@@ -257,8 +227,8 @@ class DatabaseManager:
         try:
             query = """
             SELECT u.user_id, u.email, u.verified, u.banned
-            FROM device_tokens t, users u
-            JOIN users u ON u.user_id = t.user_id
+            FROM users u
+            JOIN device_tokens t ON u.user_id = t.user_id
             WHERE t.token_hash = ?
             """
             async with self.conn.execute(query, (token,)) as cursor:
@@ -312,7 +282,6 @@ class DatabaseManager:
             logger.error(f"Failed to update user status for user {user_id}: {str(e)}", exc_info=True)
             raise
 
-    # aiosqlite is expecting a tuple, but is recieving an int
     async def delete_user_by_id(self, user_id: int):
         """Delete a user by their ID.
 
@@ -480,6 +449,56 @@ class DatabaseManager:
         """
         await self.conn.execute(query, (foodshare_id, restriction_id))
         await self.conn.commit()
+
+    async def get_or_create_restriction(self, label: str) -> int | None:
+        """Get the ID of a restriction by its label, creating it if it doesn't exist.
+
+        Args:
+        label (str): The name/label of the restriction (e.g., 'Vegan', 'Nut-Free')
+
+        Returns:
+        int: The ID of the restriction
+
+        Raises:
+        Exception: If database operation fails
+        """
+        try:
+            # First, try to find the existing restriction
+            cursor = await self.conn.execute("SELECT restriction_id FROM restrictions WHERE label = ?", (label,))
+            row = await cursor.fetchone()
+
+            if row:
+                return row["restriction_id"]
+
+            # If it doesn't exist, insert it
+            cursor = await self.conn.execute("INSERT INTO restrictions (label) VALUES (?)", (label,))
+            await self.conn.commit()
+            logger.info(f"Created new restriction '{label}' with ID: {cursor.lastrowid}")
+            return cursor.lastrowid
+        except Exception as e:
+            logger.error(f"Failed to get/create restriction '{label}': {str(e)}", exc_info=True)
+            raise
+
+    async def add_restriction_to_foodshare_by_name(self, foodshare_id: int, label: str) -> None:
+        """Link a foodshare with a restriction using the restriction's name.
+
+        Args:
+          foodshare_id (int): The ID of the foodshare
+          label (str): The name/label of the restriction to link
+
+        Raises:
+          Exception: If database operation fails
+        """
+        try:
+            restriction_id = await self.get_or_create_restriction(label)
+            if restriction_id is None:
+                raise
+
+            await self.link_foodshare_restriction(foodshare_id, restriction_id)
+            logger.info(f"Successfully linked restriction '{label}' to foodshare {foodshare_id}")
+        except Exception as e:
+            logger.error(f"Failed to link restriction '{label}' to foodshare {foodshare_id}: {str(e)}", exc_info=True)
+            raise
 
     async def get_foodshare(self, foodshare_id: int) -> Foodshare | None:
         """Retrieve a foodshare by its ID.
@@ -904,3 +923,30 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to create or verify user {email}: {str(e)}", exc_info=True)
             raise
+
+    async def delete_picture(self, picture_id: int) -> None:
+        """Delete a picture record from the database.
+
+        Args:
+            picture_id (int): The ID of the picture to delete.
+        """
+        await self.conn.execute("DELETE FROM pictures WHERE picture_id = ?", (picture_id,))
+        await self.conn.commit()
+
+    async def delete_foodshare_restrictions(self, foodshare_id: int) -> None:
+        """Delete all restrictions associated with a specific foodshare.
+
+        Args:
+            foodshare_id (int): The ID of the foodshare.
+        """
+        await self.conn.execute("DELETE FROM foodshare_restrictions WHERE foodshare_id = ?", (foodshare_id,))
+        await self.conn.commit()
+
+    async def delete_foodshare_record(self, foodshare_id: int) -> None:
+        """Delete a foodshare record from the database.
+
+        Args:
+            foodshare_id (int): The ID of the foodshare to delete.
+        """
+        await self.conn.execute("DELETE FROM foodshares WHERE foodshare_id = ?", (foodshare_id,))
+        await self.conn.commit()

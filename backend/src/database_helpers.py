@@ -182,10 +182,17 @@ def sanitize_string(input_str: str) -> str:
     Returns:
         str: The sanitized string, truncated at 500 characters if necessary
     """
-    if not isinstance(input_str, str):
-        return ""
-
     sanitized = input_str.strip()
+
+    # Remove common SQL keywords and commands that could be used for injection
+    sql_keywords = [
+        r"\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|CASE)\b",
+        r"\b(OR|AND)\s+1=1\b",
+        r"\b(OR|AND)\s+\'[^\']*\'\s*=\s*\'[^\']*\'",
+    ]
+
+    for pattern in sql_keywords:
+        sanitized = re.sub(pattern, "", sanitized, flags=re.IGNORECASE)
 
     # Limit length to prevent overly long inputs
     return sanitized[:500]

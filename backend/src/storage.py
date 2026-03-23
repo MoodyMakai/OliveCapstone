@@ -3,81 +3,53 @@
 This module provides the LocalFileStorage class for managing file uploads and deletions
 using the local filesystem. It handles saving files with unique filenames and provides
 methods for deleting files when needed.
-
-Key features:
-- UUID-based filename generation to ensure uniqueness
-- Asynchronous file operations using aiofiles
-- Automatic directory creation for upload storage
-- Error handling for file system operations
-- Simple save and delete interface
-
-Classes:
-    LocalFileStorage: Manages local file storage operations with unique filename generation
-
-Methods:
-    __init__: Initialize the storage manager with upload folder path
-    save: Save a file stream to disk with a unique filename
-    delete: Delete a file from disk
 """
 
+import logging
 import os
 import uuid
 from collections.abc import Buffer
 
-import aiofiles
+import anyio
 from anyio import Path
+
+# Initialize module-level logger
+logger = logging.getLogger(__name__)
 
 
 class LocalFileStorage:
-    """Local file storage manager for handling file uploads and deletions.
-
-    This class provides methods to save files to disk and delete them when needed,
-    using UUID-based filenames to ensure uniqueness.
-    """
+    """Local file storage manager for handling file uploads and deletions."""
 
     def __init__(self, upload_folder: str) -> None:
-        """Initialize the LocalFileStorage with a specified upload folder.
-
-        Args:
-            upload_folder (str): The path to the folder where files will be stored
-        """
+        """Initialize the LocalFileStorage with a specified upload folder."""
         self.upload_folder = upload_folder
-        os.makedirs(self.upload_folder, exist_ok=True)
+        try:
+            os.makedirs(self.upload_folder, exist_ok=True)
+        except OSError as e:
+            logger.error(f"Initialization error: Failed to create upload folder at {self.upload_folder}. Error: {e}")
+            raise
 
     async def save(self, file_stream: Buffer, extension: str) -> str:
-        """Save a file stream to disk with a unique filename.
-
-        Args:
-            file_stream (Buffer): The file stream containing the data to save
-            extension (str): The file extension to use for the saved file
-
-        Returns:
-            str: The full filepath of the saved file
-        """
+        """Save a file stream to disk with a unique filename."""
         filename = f"{uuid.uuid4()}.{extension}"
         filepath = os.path.join(self.upload_folder, filename)
 
-        async with aiofiles.open(filepath, "wb") as f:
-            await f.write(file_stream)
-        return filepath
+        try:
+            # Using anyio.open_file instead of aiofiles
+            async with await anyio.open_file(filepath, "wb") as f:
+                await f.write(file_stream)
+            return filepath
+        except OSError as e:
+            logger.error(f"Write error: Failed to save file to {filepath}. Error: {e}")
+            raise
 
     async def delete(self, filepath: str) -> bool:
-        """Delete a file from disk.
-
-        Args:
-            filepath (str): The path to the file to delete
-
-        Returns:
-            bool: True if deletion was successful, False otherwise
-        """
+        """Delete a file from disk."""
         try:
             path = Path(filepath)
             if await path.exists():
-                os.remove(filepath)
+                await path.unlink()
             return True
         except OSError as e:
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.error(f"Disk error: {e}")
+            logger.error(f"Disk error: Failed during deletion of {filepath}. Error: {e}")
             return False

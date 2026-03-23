@@ -11,8 +11,8 @@ async def fixture_test_app():
     # Configure to use an in memory database
     app.config["DB_PATH"] = ":memory:"
 
-    async with app.test_app() as test_client:
-        yield test_client
+    async with app.test_app() as test_app:
+        yield test_app
     await app.shutdown()
 
 
@@ -36,3 +36,13 @@ async def storage_service(db_manager: DatabaseManager, tmp_path):
     service = StorageService(db=db_manager, storage=storage)
     yield service
     await service.close()
+
+
+@pytest.fixture
+def temp_upload_dir(tmp_path):
+    return str(tmp_path / "uploads")
+
+
+@pytest.fixture
+def storage(temp_upload_dir):
+    return LocalFileStorage(temp_upload_dir)
