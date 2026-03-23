@@ -15,4 +15,8 @@ class FoodshareStore: ObservableObject {
     func add(_ item: FoodshareItem) {
         items.append(item)
     }
+    
+    func delete(_ item: FoodshareItem) {
+            items.removeAll {
+        }
 }
