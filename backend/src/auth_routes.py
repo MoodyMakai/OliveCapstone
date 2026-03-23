@@ -85,6 +85,77 @@ async def send_email(email: str, otp: str):
     print(f"Send {otp} to {email}")
 
 
+def require_auth(f):
+    """Decorator to require authentication for a route.
+
+    Checks if the user has a valid session token in the Authorization header.
+
+    Args:
+        f (function): The function to decorate
+
+    Returns:
+        function: The decorated function with authentication check
+    """
+
+    @wraps(f)
+    async def decorated_function(*args, **kwargs):
+        app = cast(QuartApp, current_app)
+        auth_header = request.headers.get("Authorization")
+
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Missing or invalid Authorization header"}), 401
+
+        raw_token = auth_header.split(" ")[1]
+        hashed_token = hash_token(raw_token)
+
+        session = await app.storage.db.get_session_by_token(hashed_token)
+
+        if not session:
+            return jsonify({"error": "Invalid or expired token"}), 401
+
+        now = datetime.now(tz=UTC).replace(tzinfo=None)
+        if now - session.last_used > timedelta(days=30):
+            return jsonify({"error": "Session expired. Please log in again."}), 401
+
+        if session.banned:
+            return jsonify({"error": "This account is banned."}), 403
+
+        # Update token usage timestamp
+        await app.storage.db.update_token_usage(hashed_token)
+
+        user = await app.storage.get_user(user_id=session.user_id)
+        if user is None:
+            return jsonify({"error": "The user does not exist"}), 401
+        g.user = user
+
+        return await f(*args, **kwargs)
+
+    return decorated_function
+
+
+def require_admin(f):
+    """Decorator to require admin privileges for a route.
+
+    Checks if the user attached to Quart's global `g` object has the is_admin flag set to True.
+    MUST be stacked under the @require_auth decorator.
+    """
+
+    @wraps(f)
+    async def decorated_function(*args, **kwargs):
+        # Fetch the user from the global object (populated by @require_auth)
+        user = getattr(g, "user", None)
+
+        if not user:
+            return jsonify({"error": "Authentication required."}), 401
+
+        if not user.is_admin:
+            return jsonify({"error": "You do not have permission to access this resource."}), 403
+
+        return await f(*args, **kwargs)
+
+    return decorated_function
+
+
 @auth_bp.route("/request-otp", methods=["POST"])
 @conditional_rate_limit(3, timedelta(minutes=10))
 async def request_otp():
@@ -174,72 +245,20 @@ async def verify_otp():
     return jsonify({"message": "Authentication successful", "token": raw_token}), 200
 
 
-def require_auth(f):
-    """Decorator to require authentication for a route.
-
-    Checks if the user has a valid session token in the Authorization header.
-
-    Args:
-        f (function): The function to decorate
+@auth_bp.route("/logout", methods=["POST"])
+@require_auth
+async def logout():
+    """Logout the current user by deleting their session token.
 
     Returns:
-        function: The decorated function with authentication check
+        tuple: JSON response with success message
     """
+    app = cast(QuartApp, current_app)
+    auth_header = request.headers.get("Authorization")
+    # auth_header is guaranteed to exist and start with "Bearer " by @require_auth
+    raw_token = auth_header.split(" ")[1]  # pyright: ignore[reportOptionalMemberAccess]
+    hashed_token = hash_token(raw_token)
 
-    @wraps(f)
-    async def decorated_function(*args, **kwargs):
-        app = cast(QuartApp, current_app)
-        auth_header = request.headers.get("Authorization")
+    await app.storage.db.delete_device_token(hashed_token)
 
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Missing or invalid Authorization header"}), 401
-
-        raw_token = auth_header.split(" ")[1]
-        hashed_token = hash_token(raw_token)
-
-        session = await app.storage.db.get_session_by_token(hashed_token)
-
-        if not session:
-            return jsonify({"error": "Invalid or expired token"}), 401
-
-        now = datetime.now(tz=UTC).replace(tzinfo=None)
-        if now - session.last_used > timedelta(days=30):
-            return jsonify({"error": "Session expired. Please log in again."}), 401
-
-        if session.banned:
-            return jsonify({"error": "This account is banned."}), 403
-
-        # Update token usage timestamp
-        await app.storage.db.update_token_usage(hashed_token)
-
-        user = await app.storage.get_user(user_id=session.user_id)
-        if user is None:
-            return jsonify({"error": "The user does not exist"}), 401
-        g.user = user
-
-        return await f(*args, **kwargs)
-
-    return decorated_function
-
-
-def require_admin(f):
-    """Decorator to require admin privileges for a route.
-
-    Checks if the user attached to Quart's global `g` object has the is_admin flag set to True.
-    MUST be stacked under the @require_auth decorator.
-    """
-
-    @wraps(f)
-    async def decorated_function(*args, **kwargs):
-        # Fetch the user from the global object (populated by @require_auth)
-        user = getattr(g, "user", None)
-
-        if not user:
-            return jsonify({"error": "Authentication required."}), 401
-
-        if not user.is_admin:
-            return jsonify({"error": "You do not have permission to access this resource."}), 403
-
-        return await f(*args, **kwargs)
-
-    return decorated_function
+    return jsonify({"message": "Successfully logged out"}), 200

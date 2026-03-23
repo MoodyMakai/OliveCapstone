@@ -834,6 +834,24 @@ class DatabaseManager:
             logger.error(f"Failed to create device token for user {user_id}: {str(e)}", exc_info=True)
             raise
 
+    async def delete_device_token(self, token_hash: str) -> None:
+        """Delete a device token from the database.
+
+        Args:
+            token_hash (str): The hash of the token to delete
+
+        Raises:
+            Exception: If database operation fails
+        """
+        try:
+            async with self.conn.cursor() as cursor:
+                await cursor.execute("DELETE FROM device_tokens WHERE token_hash = ?", (token_hash,))
+                await self.conn.commit()
+                logger.info("Device token deleted successfully")
+        except Exception as e:
+            logger.error(f"Failed to delete device token: {str(e)}", exc_info=True)
+            raise
+
     async def get_session_by_token(self, token_hash: str) -> DeviceSession | None:
         """Returns a DeviceSession dataclass to validate the auth token.
 

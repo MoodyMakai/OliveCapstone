@@ -78,3 +78,34 @@ async def test_verify_otp_expired(client):
     response = await client.post("/auth/verify-otp", json={"email": email, "otp": otp_code})
     assert response.status_code == 401
     assert (await response.get_json())["error"] == "OTP has expired"
+
+
+async def test_logout_success(client, test_app):
+    """Verify that a user can logout and their token becomes invalid."""
+    email = "logout_test@maine.edu"
+
+    # 1. Login to get a token
+    await client.post("/auth/request-otp", json={"email": email})
+    db = quart_app.storage.db
+    otp_record = await db.get_otp(email)
+    assert otp_record
+    otp_code = otp_record.otp
+
+    response = await client.post("/auth/verify-otp", json={"email": email, "otp": otp_code})
+    assert response.status_code == 200
+    token = (await response.get_json())["token"]
+
+    # 2. Verify token works on a protected route
+    headers = {"Authorization": f"Bearer {token}"}
+    response = await client.get("/foodshares", headers=headers)
+    assert response.status_code == 200
+
+    # 3. Logout
+    response = await client.post("/auth/logout", headers=headers)
+    assert response.status_code == 200
+    assert (await response.get_json())["message"] == "Successfully logged out"
+
+    # 4. Verify token no longer works
+    response = await client.get("/foodshares", headers=headers)
+    assert response.status_code == 401
+    assert (await response.get_json())["error"] == "Invalid or expired token"
