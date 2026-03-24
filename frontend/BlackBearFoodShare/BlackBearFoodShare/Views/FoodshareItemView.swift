@@ -2,23 +2,23 @@
 //  FoodshareItemView.swift
 //  BlackBearFoodShare
 //
-//  Created by Corey Kaulenas on 12/3/25.
-//
 
 import SwiftUI
 
 struct FoodshareItemView: View {
     let item: FoodshareItem
-    
-    // creates user auth to check if foodshare is owned/can be deleted
-    var isApprovedUser: Bool
-    //call parent
     var onDelete: (() -> Void)?
     
     @Environment(\.dismiss) var dismiss
     @Environment(\.openURL) var openURL
+    @EnvironmentObject var session: SessionManager
     
     @State private var showDeleteConfirmation = false
+    
+    // Check if the current user is the creator of this foodshare
+    private var isOwner: Bool {
+        return session.currentUser?.id == item.creator?.id
+    }
     
     private let dateFormatter: DateFormatter = {
         let df = DateFormatter()
@@ -27,12 +27,20 @@ struct FoodshareItemView: View {
         return df
     }()
     
+    private var imageURL: URL? {
+        guard let path = item.picture?.filepath else { return nil }
+        if path.hasPrefix("http") {
+            return URL(string: path)
+        }
+        return URL(string: "http://localhost:5000" + path)
+    }
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 
                 // IMAGE HANDLING
-                AsyncImage(url: URL(string: item.imageURL)) { phase in
+                AsyncImage(url: imageURL) { phase in
                     switch phase {
                     case .empty:
                         ZStack {
@@ -65,26 +73,25 @@ struct FoodshareItemView: View {
                 // TEXT CONTENT
                 VStack(alignment: .leading, spacing: 12) {
                     
-                    // Title and Description
                     Text(item.name)
                         .font(.largeTitle)
                         .bold()
                     
-                    if !item.description.isEmpty {
-                        Text(item.description)
-                            .font(.body)
-                    }
+                    Text("Shared by \(item.creator?.email ?? "Unknown")")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
 
                     Divider()
 
                     // Restrictions
-                    if !item.foodRestrictions.isEmpty {
+                    if !item.restrictions.isEmpty {
                         Text("Dietary Notes:")
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .textCase(.uppercase)
                         
-                        FlowLayoutShim(items: item.foodRestrictions)
+                        TagView(tags: item.restrictions)
+                            .frame(maxWidth: .infinity, minHeight: 40)
                     }
                     
                     Divider()
@@ -104,18 +111,19 @@ struct FoodshareItemView: View {
                                 .frame(width: 24)
                                 .foregroundColor(.secondary)
                             
-                            Text("\(item.building), Room \(item.classRoomNumber)")
+                            Text(item.location)
                                 .foregroundColor(.secondary)
                             
                             Spacer()
                             
                             Button {
-                                if let url = BuildingLocator.shared.mapsURL(for: item.building) {
+                                let building = item.location.components(separatedBy: ",").first ?? item.location
+                                if let url = BuildingLocator.shared.mapsURL(for: building) {
                                     openURL(url)
                                 }
                             } label: {
                                 HStack {
-                                    Text("Get Directions")
+                                    Text("Maps")
                                         .fontWeight(.semibold)
                                     Image(systemName: "location.fill")
                                 }
@@ -131,10 +139,7 @@ struct FoodshareItemView: View {
                 }
                 .padding(.horizontal)
                 
-                //MMB
-                // if FoodShare is owned by user deletion option appears
-                if isApprovedUser {
-                    
+                if isOwner {
                     Divider()
                         .padding(.horizontal)
                     Button(role: .destructive) {
@@ -142,22 +147,24 @@ struct FoodshareItemView: View {
                     } label: {
                         HStack {
                             Spacer()
-                            Label("Delete Foodshare", systemImage: "trash")
+                            Label("Close Foodshare", systemImage: "xmark.circle")
                                 .font(.headline)
                             Spacer()
                         }
                         .padding()
-                        .background(Color.blue)
+                        .background(Color.red)
                         .foregroundColor(.white)
                         .cornerRadius(12)
                         .padding(.horizontal)
                     }
-                    .alert("Delete this foodshare?", isPresented: $showDeleteConfirmation) {
-                        Button("Delete", role: .destructive) {
+                    .alert("Close this foodshare?", isPresented: $showDeleteConfirmation) {
+                        Button("Close", role: .destructive) {
                             onDelete?()
                             dismiss()
                         }
                         Button("Cancel", role: .cancel) { }
+                    } message: {
+                        Text("This will remove the listing from the app for everyone.")
                     }
                 }
                 
@@ -166,34 +173,4 @@ struct FoodshareItemView: View {
         }
         .ignoresSafeArea(edges: .top)
     }
-}
-
-// Helper to display tags cleanly
-struct FlowLayoutShim: View {
-    let items: [String]
-    
-    var body: some View {
-        HStack {
-            ForEach(items, id: \.self) { restriction in
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text(restriction)
-                }
-                .padding(.vertical, 4)
-                .padding(.horizontal, 8)
-                .background(Color.green.opacity(0.1))
-                .foregroundColor(.green)
-                .cornerRadius(8)
-            }
-        }
-    }
-}
-
-#Preview {
-    FoodshareItemView(
-        item: sampleFoodshareItems[0],
-        //add user auth to preview
-        isApprovedUser: true,
-        onDelete: {}
-    )
 }

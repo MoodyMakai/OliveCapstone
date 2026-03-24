@@ -7,7 +7,7 @@
 
 import Foundation
 import SwiftUI
-internal import Combine
+import Combine
 
 @MainActor
 class FoodshareManager: ObservableObject {

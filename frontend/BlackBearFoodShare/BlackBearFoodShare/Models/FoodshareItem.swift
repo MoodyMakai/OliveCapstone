@@ -2,13 +2,10 @@
 //  FoodshareItem.swift
 //  BlackBearFoodShare
 //
-//  Created by Corey Kaulenas on 12/1/25.
-//
-
 
 import Foundation
 
-enum DietaryRestriction: String, CaseIterable, Identifiable {
+enum DietaryRestriction: String, CaseIterable, Identifiable, Codable {
     case vegan = "Vegan"
     case vegetarian = "Vegetarian"
     case glutenFree = "Gluten-Free"
@@ -20,13 +17,27 @@ enum DietaryRestriction: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 }
 
-struct FoodshareItem: Identifiable {
-    let id = UUID()
+struct PictureMetadata: Codable {
+    let filepath: String
+    let mimetype: String
+}
+
+struct FoodshareItem: Codable, Identifiable {
+    let foodshare_id: Int?
     let name: String
-    let endTime: Date
-    let description: String
-    let foodRestrictions: Array<String>
-    let imageURL: String
-    let building: String
-    let classRoomNumber: String
+    let location: String
+    let ends: String // ISO 8601 String from API
+    let active: Bool?
+    let creator: User?
+    let picture: PictureMetadata?
+    let restrictions: [String]
+    
+    var id: Int { foodshare_id ?? 0 }
+    
+    // UI Helpers
+    var endTime: Date {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: ends) ?? Date()
+    }
 }

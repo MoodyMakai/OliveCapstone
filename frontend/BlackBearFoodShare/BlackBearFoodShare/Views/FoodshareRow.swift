@@ -2,9 +2,6 @@
 //  FoodshareRow.swift
 //  BlackBearFoodShare
 //
-//  Created by Corey Kaulenas on 12/1/25.
-//
-
 
 import SwiftUI
 
@@ -16,22 +13,36 @@ struct FoodshareRow: View {
         return f
     }()
     
+    private var imageURL: URL? {
+        guard let path = item.picture?.filepath else { return nil }
+        if path.hasPrefix("http") {
+            return URL(string: path)
+        }
+        return URL(string: "http://localhost:5000" + path)
+    }
+    
     var body: some View {
         VStack {
-            AsyncImage(url: URL(string: item.imageURL)) { image in
-                image.resizable().scaledToFill()
+            AsyncImage(url: imageURL) { image in
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 300, height: 300)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
             } placeholder: {
                 ProgressView()
+                    .frame(width: 300, height: 300)
             }
-            .frame(width: 300, height: 300)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
 
             VStack(alignment: .leading) {
-                Text(item.name).font(.largeTitle)
+                Text(item.name)
+                    .font(.headline)
                 Text("Ends at: \(formatter.string(from: item.endTime))")
                     .font(.subheadline)
                     .foregroundColor(.gray)
             }
+            .frame(maxWidth: 300, alignment: .leading)
+            
             Spacer()
         }
         .padding(.vertical, 6)
