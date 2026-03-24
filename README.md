@@ -1,36 +1,57 @@
-# OliveCapstone
+# Black Bear Foodshare
 
-## Overview
+Black Bear Foodshare is an iOS application designed to connect UMaine students with leftover food from campus events and dining facilities, reducing food waste and addressing food insecurity.
 
-This is a capstone project by Olive Food Solutions
+## Project Structure
 
-This contains both the frontend and backend code for the Black Bear Foodshare App,
-a iOS app that connects leftover food at UMaine, to UMaine students.
+- backend: Quart (Python) asynchronous API and SQLite database.
+- frontend: SwiftUI iOS application using MVVM architecture.
+- documents: Project requirements, design specifications, and reports.
 
-### Backend
+## Backend Setup
 
-To setup, start in the backend folder and run these commands:
+The backend requires Python 3.12 or later.
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+1. Navigate to the backend directory:
+   cd backend
 
-This should set up a virtual environment and install the requirements you need.
+2. Create and activate a virtual environment:
+   python3 -m venv .venv
+   source .venv/bin/activate
 
-Commands:
+3. Install dependencies:
+   pip install -r requirements.txt
 
-Run the app: `quart --app src.app run`
+4. Run the application:
+   quart --app src.app run
 
-Test: `pytest`
+The API will be available at http://localhost:5000.
 
-Lint: `ruff check --fix` to fix automatically (may not fix everything)
+## Backend Testing and Linting
 
-Format: `ruff format`
+1. Run all tests:
+   pytest
 
-### Documentation
+2. Run linter:
+   ruff check
 
-The inline code documentation is not implemented yet.
+3. Run formatter:
+   ruff format
 
-To find all the documents: look in the documents folder.
+## Frontend Setup
+
+The frontend requires a Mac with Xcode 16.0 or later installed.
+
+1. Open the workspace file at the root of the repository:
+   open BBFS.xcworkspace
+
+2. Select the BlackBearFoodShare scheme and an iOS Simulator (e.g., iPhone 16).
+
+3. Press Command+R to build and run the application.
+
+## Frontend Testing
+
+1. Run unit and UI tests:
+   xcodebuild -workspace BBFS.xcworkspace -scheme BlackBearFoodShare -sdk iphonesimulator test -destination 'platform=iOS Simulator,name=iPhone 16'
+
+Alternatively, press Command+U within Xcode to run tests.

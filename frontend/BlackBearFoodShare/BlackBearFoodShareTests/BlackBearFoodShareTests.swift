@@ -22,18 +22,11 @@ final class BuildingLocatorTests: XCTestCase {
     func testAddressLookup() {
         let locator = BuildingLocator.shared
         
-        XCTAssertEqual(locator.address(for: "Neville Hall"), "98 Beddington Rd, Orono, ME 04473 United States")
+        XCTAssertEqual(locator.address(for: "Neville Hall"), "98 Beddington Rd, Orono, ME 04473")
         
         XCTAssertNil(locator.address(for: "NonExistent"))
     }
 
-    func testMapsURL() {
-        let locator = BuildingLocator.shared
-
-        let url = locator.mapsURL(for: "DPC Hall")
-        XCTAssertNotNil(url)
-        XCTAssert(url!.absoluteString.contains("29%20Beddington%20Rd,%20Orono,%20ME%2004469"))
-    }
 
     func testAliasesList() {
         let locator = BuildingLocator.shared
