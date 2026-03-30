@@ -27,12 +27,16 @@
 		2E50A6532ED5071600898367 /* BlackBearFoodShare.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BlackBearFoodShare.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2E50A6622ED5071700898367 /* BlackBearFoodShareTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BlackBearFoodShareTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2E50A66C2ED5071700898367 /* BlackBearFoodShareUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BlackBearFoodShareUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2E50A6802ED5071800898367 /* BlackBearFoodShare/Config/Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = BlackBearFoodShare/Config/Debug.xcconfig; sourceTree = "<group>"; };
+		2E50A6812ED5071800898367 /* BlackBearFoodShare/Config/Release.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = BlackBearFoodShare/Config/Release.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		0F8D58792F55DE2C00A1E68A /* Exceptions for "BlackBearFoodShare" folder in "BlackBearFoodShare" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Config/Debug.xcconfig,
+				Config/Release.xcconfig,
 				Info.plist,
 			);
 			target = 2E50A6522ED5071600898367 /* BlackBearFoodShare */;
@@ -85,6 +89,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2E21F37A2F7AC67000514025 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				2E50A6802ED5071800898367 /* BlackBearFoodShare/Config/Debug.xcconfig */,
+				2E50A6812ED5071800898367 /* BlackBearFoodShare/Config/Release.xcconfig */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		2E50A64A2ED5071600898367 = {
 			isa = PBXGroup;
 			children = (
@@ -92,6 +105,7 @@
 				2E50A6652ED5071700898367 /* BlackBearFoodShareTests */,
 				2E50A66F2ED5071700898367 /* BlackBearFoodShareUITests */,
 				2E50A6542ED5071600898367 /* Products */,
+				2E21F37A2F7AC67000514025 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -284,6 +298,7 @@
 /* Begin XCBuildConfiguration section */
 		2E50A6742ED5071800898367 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2E50A6802ED5071800898367 /* BlackBearFoodShare/Config/Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -347,6 +362,7 @@
 		};
 		2E50A6752ED5071800898367 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2E50A6812ED5071800898367 /* BlackBearFoodShare/Config/Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -403,6 +419,7 @@
 		};
 		2E50A6772ED5071800898367 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2E50A6802ED5071800898367 /* BlackBearFoodShare/Config/Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -410,6 +427,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BlackBearFoodShare/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -444,6 +462,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BlackBearFoodShare/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -471,6 +490,7 @@
 		};
 		2E50A67A2ED5071800898367 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2E50A6802ED5071800898367 /* BlackBearFoodShare/Config/Debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -513,6 +533,7 @@
 		};
 		2E50A67D2ED5071800898367 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2E50A6802ED5071800898367 /* BlackBearFoodShare/Config/Debug.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -559,7 +580,7 @@
 				2E50A6752ED5071800898367 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		2E50A6762ED5071800898367 /* Build configuration list for PBXNativeTarget "BlackBearFoodShare" */ = {
 			isa = XCConfigurationList;
@@ -568,7 +589,7 @@
 				2E50A6782ED5071800898367 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		2E50A6792ED5071800898367 /* Build configuration list for PBXNativeTarget "BlackBearFoodShareTests" */ = {
 			isa = XCConfigurationList;
@@ -577,7 +598,7 @@
 				2E50A67B2ED5071800898367 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		2E50A67C2ED5071800898367 /* Build configuration list for PBXNativeTarget "BlackBearFoodShareUITests" */ = {
 			isa = XCConfigurationList;
@@ -586,7 +607,7 @@
 				2E50A67E2ED5071800898367 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 	};
