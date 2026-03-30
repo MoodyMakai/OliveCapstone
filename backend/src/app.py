@@ -58,7 +58,8 @@ from src.storage import LocalFileStorage
 load_dotenv()
 
 app = QuartApp(__name__)
-app.config["DB_PATH"] = "database.sqlite"
+app.config["DB_PATH"] = os.getenv("DB_PATH", "database.sqlite")
+app.config["UPLOAD_FOLDER"] = os.getenv("UPLOAD_FOLDER", "images")
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -72,7 +72,7 @@ class GmailService:
                     <div style="{code_style}">
                         {otp}
                     </div>
-                    <p>This code will expire in 10 minutes. If you did not request this code, 
+                    <p>This code will expire in 10 minutes. If you did not request this code,
                        please ignore this email.</p>
                     <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
                     <p style="font-size: 12px; color: #777; text-align: center;">
@@ -107,7 +107,7 @@ class ConsoleService:
     async def send_otp(self, email: str, otp: str) -> bool:
         """Log the OTP to the console for easy development."""
         print("\n" + "=" * 40)
-        print("📧 EMAIL BYPASS (ConsoleService)")
+        print("EMAIL BYPASS (ConsoleService)")
         print(f"To:      {email}")
         print(f"Subject: {otp} is your code")
         print(f"Code:    {otp}")

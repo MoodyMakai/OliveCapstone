@@ -10,3 +10,6 @@ Pillow
 aiofiles
 aiosmtplib
 python-dotenv
+quart-cors
+hypercorn
+uvloop
