@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -64,7 +64,7 @@ async def test_verify_otp_expired(client):
     # Backdate the OTP expiration
 
     db = quart_app.storage.db
-    expired_time = (datetime.now(UTC) - timedelta(minutes=1)).isoformat()
+    expired_time = (datetime.now(tz=timezone.utc) - timedelta(minutes=1)).isoformat()
     await db.conn.execute("UPDATE otp_codes SET expires_at = ? WHERE email = ?", (expired_time, email))
     await db.conn.commit()
 

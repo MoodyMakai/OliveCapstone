@@ -8,7 +8,6 @@ methods for deleting files when needed.
 import logging
 import os
 import uuid
-from collections.abc import Buffer
 
 import anyio
 from anyio import Path
@@ -33,7 +32,7 @@ class LocalFileStorage:
             logger.error(f"Initialization error: Failed to create upload folder at {self.upload_folder}. Error: {e}")
             raise
 
-    async def save(self, file_stream: Buffer, extension: str) -> str:
+    async def save(self, file_stream: bytes, extension: str) -> str:
         """Save a file stream to disk with a unique filename.
 
         Returns:

@@ -1,5 +1,5 @@
 import io
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import aiofiles
 import anyio
@@ -33,7 +33,7 @@ async def test_storage_service_saves_file_and_metadata(storage_service: StorageS
     img.save(img_byte_arr, format="PNG")
     dummy_file_stream = img_byte_arr.getvalue()
 
-    expires = datetime.now(tz=UTC) + timedelta(days=1)
+    expires = datetime.now(tz=timezone.utc) + timedelta(days=1)
 
     picture_id = await storage_service.add_picture_with_file(
         file_stream=dummy_file_stream,

@@ -6,14 +6,13 @@ resizing, and converting to optimized WebP format for efficient storage and deli
 
 import io
 import logging
-from collections.abc import Buffer
 
 from PIL import Image, ImageOps
 
 logger = logging.getLogger(__name__)
 
 
-def process_image(file_stream: Buffer, target_size: int = 800) -> io.BytesIO:
+def process_image(file_stream: bytes, target_size: int = 800) -> io.BytesIO:
     """Process an image to be square, resized, and converted to optimized WebP.
 
     This function performs the following operations:
@@ -24,7 +23,7 @@ def process_image(file_stream: Buffer, target_size: int = 800) -> io.BytesIO:
     5. Saves the resulting image to a BytesIO buffer as WebP with 80% quality.
 
     Args:
-        file_stream (Buffer): The input buffer containing raw image data.
+        file_stream (bytes): The input buffer containing raw image data.
         target_size (int): The target width and height for the square image. Defaults to 800.
 
     Returns:

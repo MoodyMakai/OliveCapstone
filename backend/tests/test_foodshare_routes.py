@@ -1,5 +1,5 @@
 import io
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from PIL import Image
@@ -66,26 +66,26 @@ async def test_get_foodshares_active_filtering(authenticated_client, admin_clien
     await quart_app.storage.create_foodshare_with_picture(
         name="Active Pizza",
         location="Union",
-        ends=datetime.now(UTC) + timedelta(hours=2),
+        ends=datetime.now(timezone.utc) + timedelta(hours=2),
         active=True,
         user_id=1,
         file_stream=img_buf.getvalue(),
         extension="jpg",
         mimetype="image/jpeg",
-        picture_expires=datetime.now(UTC) + timedelta(days=1),
+        picture_expires=datetime.now(timezone.utc) + timedelta(days=1),
     )
 
     # 2. Create an inactive foodshare
     await quart_app.storage.create_foodshare_with_picture(
         name="Inactive Pizza",
         location="Union",
-        ends=datetime.now(UTC) + timedelta(hours=2),
+        ends=datetime.now(timezone.utc) + timedelta(hours=2),
         active=False,
         user_id=1,
         file_stream=img_buf.getvalue(),
         extension="jpg",
         mimetype="image/jpeg",
-        picture_expires=datetime.now(UTC) + timedelta(days=1),
+        picture_expires=datetime.now(timezone.utc) + timedelta(days=1),
     )
 
     # 3. Create an expired foodshare

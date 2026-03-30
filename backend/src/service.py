@@ -34,7 +34,6 @@ Methods:
 
 import asyncio
 import logging
-from collections.abc import Buffer
 from datetime import datetime
 
 from src.database import DatabaseManager
@@ -76,7 +75,7 @@ class StorageService:
 
     async def add_picture_with_file(
         self,
-        file_stream: Buffer,
+        file_stream: bytes,
         extension: str,
         mimetype: str,
         expires: datetime,
@@ -87,7 +86,7 @@ class StorageService:
         for optimal storage and fast mobile delivery.
 
         Args:
-            file_stream (Buffer): The file stream containing the original picture data
+            file_stream (bytes): The file stream containing the original picture data
             extension (str): Original file extension (ignored during processing)
             mimetype (str): Original MIME type (ignored during processing)
             expires (datetime): The expiration date/time for the picture

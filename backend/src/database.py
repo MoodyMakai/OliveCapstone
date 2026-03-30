@@ -25,7 +25,7 @@ Usage:
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import aiosqlite
 import anyio
@@ -371,7 +371,7 @@ class DatabaseManager:
             Exception: If database operation fails
         """
         try:
-            now = datetime.now(tz=UTC)
+            now = datetime.now(tz=timezone.utc)
             select_query = "SELECT filepath FROM pictures WHERE expires < ?"
             async with self.conn.execute(select_query, (now,)) as cursor:
                 rows = await cursor.fetchall()

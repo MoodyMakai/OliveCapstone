@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -115,7 +115,7 @@ async def test_create_or_verify_user(db_manager):
 
 async def test_add_and_get_picture(db_manager):
     """Test adding a picture and retrieving its metadata."""
-    future_date = datetime.now(tz=UTC) + timedelta(days=1)
+    future_date = datetime.now(tz=timezone.utc) + timedelta(days=1)
 
     picture_id = await db_manager.add_picture(expires=future_date, filepath="/images/test.jpg", mimetype="image/jpeg")
 
@@ -135,8 +135,8 @@ async def test_get_picture_not_found(db_manager):
 
 async def test_delete_expired_pictures(db_manager):
     """Test that only expired pictures are deleted and their filepaths returned."""
-    past_date = datetime.now(tz=UTC) - timedelta(days=1)
-    future_date = datetime.now(tz=UTC) + timedelta(days=1)
+    past_date = datetime.now(tz=timezone.utc) - timedelta(days=1)
+    future_date = datetime.now(tz=timezone.utc) + timedelta(days=1)
 
     # Add an expired picture
     expired_id = await db_manager.add_picture(past_date, "/images/expired.jpg", "image/jpeg")
@@ -159,7 +159,7 @@ async def test_delete_expired_pictures(db_manager):
 
 async def test_add_and_get_foodshare_basic(db_manager):
     """Test adding a basic foodshare without foreign keys (creator/picture)."""
-    ends_date = datetime.now(tz=UTC) + timedelta(hours=2)
+    ends_date = datetime.now(tz=timezone.utc) + timedelta(hours=2)
 
     fs_id = await db_manager.add_foodshare(name="Free Pizza", location="Student Union", ends=ends_date, active=True)
 
@@ -179,13 +179,15 @@ async def test_add_and_get_foodshare_with_fks(db_manager):
     """Test adding a foodshare with a creator and picture linked."""
     # 1. Setup foreign key dependencies
     user_id = await db_manager.add_user("creator@maine.edu")
-    pic_id = await db_manager.add_picture(datetime.now(tz=UTC) + timedelta(days=1), "/images/pizza.jpg", "image/jpeg")
+    pic_id = await db_manager.add_picture(
+        datetime.now(tz=timezone.utc) + timedelta(days=1), "/images/pizza.jpg", "image/jpeg"
+    )
 
     # 2. Add foodshare
     fs_id = await db_manager.add_foodshare(
         name="Donuts",
         location="Library",
-        ends=datetime.now(tz=UTC) + timedelta(hours=1),
+        ends=datetime.now(tz=timezone.utc) + timedelta(hours=1),
         active=True,
         user_fk_id=user_id,
         picture_fk_id=pic_id,
@@ -203,7 +205,7 @@ async def test_add_and_get_foodshare_with_fks(db_manager):
 
 async def test_foodshare_restrictions(db_manager):
     """Test creating restrictions and linking them to a foodshare."""
-    fs_id = await db_manager.add_foodshare("Bagels", "Lobby", datetime.now(tz=UTC) + timedelta(hours=1), True)
+    fs_id = await db_manager.add_foodshare("Bagels", "Lobby", datetime.now(tz=timezone.utc) + timedelta(hours=1), True)
 
     # Add restrictions
     await db_manager.add_restriction_to_foodshare_by_name(fs_id, "Gluten-Free")
@@ -221,7 +223,7 @@ async def test_foodshare_restrictions(db_manager):
 
 async def test_get_all_active_foodshares(db_manager):
     """Test retrieving only the active foodshares."""
-    ends_date = datetime.now(tz=UTC) + timedelta(hours=1)
+    ends_date = datetime.now(tz=timezone.utc) + timedelta(hours=1)
 
     # Add 2 active, 1 inactive
     await db_manager.add_foodshare("Active 1", "Loc 1", ends_date, active=True)
@@ -239,7 +241,9 @@ async def test_get_all_active_foodshares(db_manager):
 
 async def test_deactivate_foodshare(db_manager):
     """Test setting a foodshare to inactive."""
-    fs_id = await db_manager.add_foodshare("Tacos", "Quad", datetime.now(tz=UTC) + timedelta(hours=1), active=True)
+    fs_id = await db_manager.add_foodshare(
+        "Tacos", "Quad", datetime.now(tz=timezone.utc) + timedelta(hours=1), active=True
+    )
 
     # Verify active first
     fs_before = await db_manager.get_foodshare(fs_id)
@@ -260,7 +264,7 @@ async def test_add_and_get_survey(db_manager):
     """Test adding a survey linked to a foodshare and retrieving it."""
     # 1. Setup foodshare dependency
     fs_id = await db_manager.add_foodshare(
-        name="Survey Pizza", location="Room 101", ends=datetime.now(tz=UTC) + timedelta(hours=1), active=True
+        name="Survey Pizza", location="Room 101", ends=datetime.now(tz=timezone.utc) + timedelta(hours=1), active=True
     )
 
     # 2. Add survey
@@ -298,7 +302,7 @@ async def test_get_all_surveys(db_manager):
 
 async def test_save_and_get_otp(db_manager):
     """Test saving a new OTP record and retrieving it."""
-    expires = datetime.now(tz=UTC) + timedelta(minutes=10)
+    expires = datetime.now(tz=timezone.utc) + timedelta(minutes=10)
     email = "otp_test@maine.edu"
 
     otp_record = OTPRecord(email=email, otp="123456", expires_at=expires)
@@ -318,11 +322,11 @@ async def test_update_otp_on_conflict(db_manager):
     email = "conflict@maine.edu"
 
     # Initial OTP
-    expires1 = datetime.now(tz=UTC) + timedelta(minutes=10)
+    expires1 = datetime.now(tz=timezone.utc) + timedelta(minutes=10)
     await db_manager.save_otp(OTPRecord(email=email, otp="111111", expires_at=expires1))
 
     # New OTP for the same email
-    expires2 = datetime.now(tz=UTC) + timedelta(minutes=20)
+    expires2 = datetime.now(tz=timezone.utc) + timedelta(minutes=20)
     await db_manager.save_otp(OTPRecord(email=email, otp="222222", expires_at=expires2))
 
     fetched_otp = await db_manager.get_otp(email)
@@ -334,7 +338,7 @@ async def test_update_otp_on_conflict(db_manager):
 async def test_delete_otp(db_manager):
     """Test deleting an OTP record by email."""
     email = "delete_otp@maine.edu"
-    expires = datetime.now(tz=UTC) + timedelta(minutes=10)
+    expires = datetime.now(tz=timezone.utc) + timedelta(minutes=10)
 
     await db_manager.save_otp(OTPRecord(email=email, otp="999999", expires_at=expires))
     await db_manager.delete_otp(email)

@@ -42,7 +42,7 @@ Functions:
 
 import logging
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import cast
 
@@ -113,7 +113,7 @@ def require_auth(f):
         if not session:
             return jsonify({"error": "Invalid or expired token"}), 401
 
-        now = datetime.now(tz=UTC).replace(tzinfo=None)
+        now = datetime.now(tz=timezone.utc).replace(tzinfo=None)
         if now - session.last_used > timedelta(days=30):
             return jsonify({"error": "Session expired. Please log in again."}), 401
 
@@ -183,7 +183,7 @@ async def request_otp():
         return jsonify({"error": "This account is banned."}), 403
 
     otp = "".join(str(secrets.randbelow(10)) for _ in range(6))
-    expires_at = datetime.now(tz=UTC) + timedelta(minutes=10)
+    expires_at = datetime.now(tz=timezone.utc) + timedelta(minutes=10)
 
     otp_record = OTPRecord(email=email, otp=otp, expires_at=expires_at)
     await app.storage.db.save_otp(otp_record)
@@ -221,7 +221,7 @@ async def verify_otp():
         return jsonify({"error": generic_error}), 401
 
     expires_at = record.expires_at
-    if datetime.now(tz=UTC) > expires_at:
+    if datetime.now(tz=timezone.utc) > expires_at:
         await app.storage.db.delete_otp(email)
         return jsonify({"error": "OTP has expired"}), 401
 
