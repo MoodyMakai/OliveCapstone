@@ -174,3 +174,8 @@ struct FoodshareItemView: View {
         .ignoresSafeArea(edges: .top)
     }
 }
+
+#Preview {
+    FoodshareItemView(item: sampleFoodshareItems[0])
+        .environmentObject(SessionManager.preview)
+}

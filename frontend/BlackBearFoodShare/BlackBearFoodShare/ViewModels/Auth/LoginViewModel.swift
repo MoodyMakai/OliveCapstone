@@ -16,8 +16,12 @@ class LoginViewModel: ObservableObject {
     
     private let authService: AuthServiceProtocol
     
-    init(authService: AuthServiceProtocol = AuthService()) {
+    init(authService: AuthServiceProtocol) {
         self.authService = authService
+    }
+    
+    convenience init() {
+        self.init(authService: AuthService())
     }
     
     func requestOTP() {

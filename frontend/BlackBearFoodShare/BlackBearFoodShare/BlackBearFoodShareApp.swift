@@ -32,5 +32,7 @@ struct MyApp: App {
 }
 
 #Preview {
-    FoodshareListView().environmentObject(FoodshareStore())
+    FoodshareListView()
+        .environmentObject(FoodshareStore())
+        .environmentObject(SessionManager.preview)
 }

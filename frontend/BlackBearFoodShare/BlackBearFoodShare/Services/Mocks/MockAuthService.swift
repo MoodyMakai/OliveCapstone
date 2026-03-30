@@ -1,15 +1,15 @@
 //
 //  MockAuthService.swift
-//  BlackBearFoodShareTests
+//  BlackBearFoodShare
 //
 
 import Foundation
-@testable import BlackBearFoodShare
 
 class MockAuthService: AuthServiceProtocol {
     var shouldError = false
     var lastRequestedEmail: String?
     var lastVerifiedOTP: String?
+    var mockAuthResponse = AuthResponse(token: "mock-token", message: "Success")
     
     func requestOTP(email: String) async throws {
         if shouldError { throw BBFSError.serverError("Mock Error") }
@@ -19,7 +19,7 @@ class MockAuthService: AuthServiceProtocol {
     func verifyOTP(email: String, otp: String) async throws -> AuthResponse {
         if shouldError { throw BBFSError.unauthorized }
         lastVerifiedOTP = otp
-        return AuthResponse(token: "mock-token", message: "Success")
+        return mockAuthResponse
     }
     
     func logout() async throws {

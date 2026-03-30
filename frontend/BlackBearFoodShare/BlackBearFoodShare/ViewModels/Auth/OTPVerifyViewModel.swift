@@ -17,10 +17,14 @@ class OTPVerifyViewModel: ObservableObject {
     
     private let authService: AuthServiceProtocol
     
-    init(email: String, authService: AuthServiceProtocol = AuthService()) {
+    init(email: String, authService: AuthServiceProtocol) {
         self.email = email
         self.authService = authService
         self.isLoading = false
+    }
+    
+    convenience init(email: String) {
+        self.init(email: email, authService: AuthService())
     }
     
     func verifyOTP() {

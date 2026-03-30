@@ -5,11 +5,16 @@
 
 import SwiftUI
 
+@MainActor
 struct OTPVerifyView: View {
     @StateObject private var viewModel: OTPVerifyViewModel
     
-    init(email: String) {
-        _viewModel = StateObject(wrappedValue: OTPVerifyViewModel(email: email))
+    init(email: String, viewModel: @autoclosure @escaping () -> OTPVerifyViewModel? = nil) {
+        if let providedVM = viewModel() {
+            _viewModel = StateObject(wrappedValue: providedVM)
+        } else {
+            _viewModel = StateObject(wrappedValue: OTPVerifyViewModel(email: email))
+        }
     }
     
     var body: some View {
@@ -52,4 +57,12 @@ struct OTPVerifyView: View {
         .navigationTitle("OTP Verification")
         .navigationBarTitleDisplayMode(.inline)
     }
+}
+
+#Preview {
+    let mockService = MockAuthService()
+    let viewModel = OTPVerifyViewModel(email: "test@maine.edu", authService: mockService)
+    
+    OTPVerifyView(email: "test@maine.edu", viewModel: viewModel)
+        .environmentObject(SessionManager.shared)
 }

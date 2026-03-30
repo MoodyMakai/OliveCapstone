@@ -6,12 +6,22 @@
 import SwiftUI
 import PhotosUI
 
+@MainActor
 struct FoodshareFormView: View {
     @Environment(\.dismiss) var dismiss
     
     // Dependencies
-    private let service: FoodshareServiceProtocol = FoodshareService()
+    private let service: FoodshareServiceProtocol
     var onComplete: () -> Void
+    
+    init(service: FoodshareServiceProtocol, onComplete: @escaping () -> Void) {
+        self.service = service
+        self.onComplete = onComplete
+    }
+    
+    init(onComplete: @escaping () -> Void) {
+        self.init(service: FoodshareService(), onComplete: onComplete)
+    }
     
     // State
     @State private var name: String = ""
@@ -133,4 +143,9 @@ struct FoodshareFormView: View {
             isLoading = false
         }
     }
+}
+
+#Preview {
+    FoodshareFormView(service: MockFoodshareService(), onComplete: {})
+        .environmentObject(SessionManager.preview)
 }

@@ -5,12 +5,21 @@
 
 import SwiftUI
 
+@MainActor
 struct FoodshareListView: View {
-    @StateObject private var viewModel = FoodshareFeedViewModel()
+    @StateObject private var viewModel: FoodshareFeedViewModel
     @EnvironmentObject var session: SessionManager
     
     @State private var showingCreate = false
     @State private var activeFilter: DietaryRestriction? = nil
+    
+    init(viewModel: @autoclosure @escaping () -> FoodshareFeedViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel())
+    }
+    
+    init() {
+        self.init(viewModel: FoodshareFeedViewModel())
+    }
     
     // Computed property to filter the list dynamically
     var filteredItems: [FoodshareItem] {
@@ -103,6 +112,10 @@ struct FoodshareListView: View {
 }
 
 #Preview {
-    FoodshareListView()
-        .environmentObject(SessionManager.shared)
+    let mockService = MockFoodshareService()
+    let viewModel = FoodshareFeedViewModel(service: mockService)
+    
+    FoodshareListView(viewModel: viewModel)
+        .environmentObject(FoodshareStore())
+        .environmentObject(SessionManager.preview)
 }

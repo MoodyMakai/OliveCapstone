@@ -15,8 +15,12 @@ class FoodshareFeedViewModel: ObservableObject {
     
     private let service: FoodshareServiceProtocol
     
-    init(service: FoodshareServiceProtocol = FoodshareService()) {
+    init(service: FoodshareServiceProtocol) {
         self.service = service
+    }
+    
+    convenience init() {
+        self.init(service: FoodshareService())
     }
     
     func loadItems() {

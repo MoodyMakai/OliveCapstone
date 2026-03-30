@@ -11,14 +11,25 @@ import Combine
 class SessionManager: ObservableObject {
     static let shared = SessionManager()
     
+    // For SwiftUI Previews
+    static var preview: SessionManager {
+        let manager = SessionManager(isAuthenticated: true)
+        manager.currentUser = User(user_id: 1, email: "preview@maine.edu", is_admin: 0)
+        return manager
+    }
+    
     private let service = "ofs.BlackBearFoodShare"
     private let account = "authToken"
     
     @Published var isAuthenticated: Bool = false
     @Published var currentUser: User?
     
-    private init() {
-        checkSession()
+    internal init(isAuthenticated: Bool? = nil) {
+        if let isAuthenticated = isAuthenticated {
+            self.isAuthenticated = isAuthenticated
+        } else {
+            checkSession()
+        }
     }
     
     func checkSession() {

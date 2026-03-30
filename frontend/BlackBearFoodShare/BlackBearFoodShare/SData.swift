@@ -6,7 +6,6 @@
 import Foundation
 import Combine
 
-// We keep sample data but update it to match the new Codable structure
 var sampleFoodshareItems: [FoodshareItem] = [
     FoodshareItem(
         foodshare_id: 1,

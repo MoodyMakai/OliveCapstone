@@ -5,8 +5,17 @@
 
 import SwiftUI
 
+@MainActor
 struct LoginView: View {
-    @StateObject private var viewModel = LoginViewModel()
+    @StateObject private var viewModel: LoginViewModel
+    
+    init(viewModel: @autoclosure @escaping () -> LoginViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel())
+    }
+    
+    init() {
+        self.init(viewModel: LoginViewModel())
+    }
     
     var body: some View {
         NavigationView {
@@ -61,6 +70,10 @@ struct LoginView: View {
 
 struct LoginView_Previews: PreviewProvider {
     static var previews: some View {
-        LoginView()
+        let mockService = MockAuthService()
+        let viewModel = LoginViewModel(authService: mockService)
+        
+        LoginView(viewModel: viewModel)
+            .environmentObject(SessionManager.shared)
     }
 }
