@@ -8,3 +8,5 @@ anyio
 itsdangerous
 Pillow
 aiofiles
+aiosmtplib
+python-dotenv

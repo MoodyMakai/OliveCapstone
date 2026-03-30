@@ -40,6 +40,7 @@ from dataclasses import asdict
 from datetime import datetime
 
 import aiosqlite
+from dotenv import load_dotenv
 from quart import g, request
 from quart.json import jsonify
 from quart_rate_limiter import RateLimiter
@@ -47,10 +48,14 @@ from quart_rate_limiter import RateLimiter
 from src.auth_routes import auth_bp, require_admin, require_auth
 from src.core import QuartApp
 from src.database import DatabaseManager
+from src.email_service import ConsoleService, GmailService, MockService
 
 # Blueprint for email token verification
 from src.service import StorageService
 from src.storage import LocalFileStorage
+
+# Load environment variables
+load_dotenv()
 
 app = QuartApp(__name__)
 app.config["DB_PATH"] = "database.sqlite"
@@ -361,7 +366,25 @@ async def startup():
         upload_folder = app.config.get("UPLOAD_FOLDER", "images")
         local_file_store = LocalFileStorage(upload_folder)
         app.storage = StorageService(db, local_file_store)
-        logger.info("Application started successfully")
+
+        # Initialize Email Service (if not already injected by tests)
+        if not hasattr(app, "email_service"):
+            provider_type = os.getenv("EMAIL_PROVIDER", "console").lower()
+            if provider_type == "gmail":
+                gmail_user = os.getenv("GMAIL_USER")
+                gmail_pass = os.getenv("GMAIL_APP_PASSWORD")
+                logo_url = os.getenv("EMAIL_LOGO_URL")
+                if not gmail_user or not gmail_pass:
+                    logger.warning("Gmail credentials missing. Falling back to ConsoleService.")
+                    app.email_service = ConsoleService()
+                else:
+                    app.email_service = GmailService(gmail_user, gmail_pass, logo_url)
+            elif provider_type == "mock":
+                app.email_service = MockService()
+            else:
+                app.email_service = ConsoleService()
+
+        logger.info(f"Application started successfully with {type(app.email_service).__name__}")
     except Exception as e:
         logger.error(f"Failed to start application: {str(e)}", exc_info=True)
         raise

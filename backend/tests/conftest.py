@@ -5,6 +5,7 @@ import pytest
 from src.app import app as quart_app
 from src.database import DatabaseManager
 from src.database_helpers import hash_token
+from src.email_service import MockService
 from src.service import StorageService
 from src.storage import LocalFileStorage
 
@@ -47,6 +48,9 @@ async def fixture_test_app(tmp_path):
     quart_app.config["TESTING"] = True
     # Use a temporary directory for images during tests
     quart_app.config["UPLOAD_FOLDER"] = str(tmp_path / "images")
+
+    # Inject MockService for tests
+    quart_app.email_service = MockService()
 
     async with quart_app.test_app() as test_app:
         yield test_app

@@ -3,41 +3,6 @@
 This module handles all authentication-related endpoints including OTP (One-Time Password)
 generation and verification, user authentication, and session management. It provides
 email-based authentication with token-based session handling.
-
-The module implements:
-- OTP request and verification for email authentication
-- User session token generation and validation
-- Authentication decorators for protecting routes
-- Email sending functionality (stub implementation)
-- Banned user account handling
-
-Key features:
-- Secure OTP generation and storage with expiration
-- Token-based authentication system
-- Session management and token usage tracking
-- Email format validation
-- Authentication decorator for route protection
-- Proper error handling and status codes
-
-Endpoints:
-    POST /auth/request-otp: Request an OTP for email verification
-    POST /auth/verify-otp: Verify the OTP and authenticate user
-
-Usage:
-    Import this module to register authentication routes with the main application.
-
-    The require_auth decorator can be applied to any route that requires
-    authentication, ensuring only valid users can access protected endpoints.
-
-Attributes:
-    app (QuartApp): The main Quart application instance
-    logger: Application logger for tracking authentication events and errors
-
-Decorators:
-    require_auth: Decorator to protect routes requiring authentication
-
-Functions:
-    send_email: Stub function for sending OTP emails (to be implemented in production)
 """
 
 import logging
@@ -72,30 +37,8 @@ logger = logging.getLogger(__name__)
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
-async def send_email(email: str, otp: str):
-    """Send an email with the OTP to the specified email address.
-
-    In production, this would send an actual email. For now, it logs
-    the OTP for debugging purposes.
-
-    Args:
-        email (str): The recipient's email address
-        otp (str): The one-time password to send
-    """
-    print(f"Send {otp} to {email}")
-
-
 def require_auth(f):
-    """Decorator to require authentication for a route.
-
-    Checks if the user has a valid session token in the Authorization header.
-
-    Args:
-        f (function): The function to decorate
-
-    Returns:
-        function: The decorated function with authentication check
-    """
+    """Decorator to require authentication for a route."""
 
     @wraps(f)
     async def decorated_function(*args, **kwargs):
@@ -188,7 +131,9 @@ async def request_otp():
     otp_record = OTPRecord(email=email, otp=otp, expires_at=expires_at)
     await app.storage.db.save_otp(otp_record)
 
-    app.add_background_task(send_email, email, otp)
+    # Use the injected email service
+    app.add_background_task(app.email_service.send_otp, email, otp)
+
     return jsonify({"message": "OTP sent successfully"}), 200
 
 

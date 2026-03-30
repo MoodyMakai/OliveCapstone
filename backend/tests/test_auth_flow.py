@@ -41,6 +41,13 @@ async def test_full_auth_flow(client, test_app):
     response = await client.get("/foodshares", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
 
+    # 5. Verify email was "sent" via MockService
+    assert len(quart_app.email_service.sent_messages) > 0
+    # Find the message for our email
+    sent_msg = next((m for m in quart_app.email_service.sent_messages if m["email"] == email), None)
+    assert sent_msg is not None
+    assert sent_msg["otp"] == otp_code
+
 
 async def test_verify_otp_wrong_code(client):
     """Verify that a wrong OTP code results in a 401 error."""
