@@ -203,6 +203,7 @@ class DatabaseManager:
                     email=row["email"],
                     verified=bool(row["verified"]),
                     banned=bool(row["banned"]),
+                    is_admin=bool(row["is_admin"]),
                 )
                 logger.debug(f"User retrieved successfully by email: {email}")
                 return user
@@ -226,7 +227,7 @@ class DatabaseManager:
         """
         try:
             query = """
-            SELECT u.user_id, u.email, u.verified, u.banned
+            SELECT u.user_id, u.email, u.verified, u.banned, u.is_admin
             FROM users u
             JOIN device_tokens t ON u.user_id = t.user_id
             WHERE t.token_hash = ?
@@ -239,6 +240,7 @@ class DatabaseManager:
                         email=row["email"],
                         verified=bool(row["verified"]),
                         banned=bool(row["banned"]),
+                        is_admin=bool(row["is_admin"]),
                     )
                     logger.debug("User retrieved successfully by token")
                     return user

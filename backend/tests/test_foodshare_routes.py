@@ -42,8 +42,9 @@ async def test_create_foodshare_success(authenticated_client):
 
     assert response.status_code == 201
     res_json = await response.get_json()
-    assert res_json["success"] is True
+    assert res_json["name"] == "Free Pizza"
     assert "foodshare_id" in res_json
+    assert res_json["active"] is True
 
 
 async def test_get_foodshares_active_filtering(authenticated_client, admin_client):

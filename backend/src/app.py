@@ -34,7 +34,6 @@ Usage:
 """
 
 import logging
-import mimetypes
 import os
 from dataclasses import asdict
 from datetime import datetime
@@ -176,6 +175,10 @@ async def add_foodshare():
 
         picture_expires = datetime.fromisoformat(str(form.get("picture_expires")))
 
+        # Get restrictions list if provided as a comma-separated string
+        restrictions_raw = form.get("restrictions", "")
+        restrictions = [r.strip() for r in restrictions_raw.split(",") if r.strip()] if restrictions_raw else None
+
         # Validate file extension and MIME type
         if not picture.filename:
             logger.warning("Missing filename in add_foodshare request")
@@ -183,8 +186,7 @@ async def add_foodshare():
 
         # Extract original metadata (extension and mimetype are updated during processing)
         extension = picture.filename.split(".")[-1].lower() if "." in picture.filename else "bin"
-        mime_type, _ = mimetypes.guess_type(picture.filename)
-
+        mime_type = picture.content_type
         # Basic mime check to ensure it's an image
         if not mime_type or not mime_type.startswith("image/"):
             logger.warning(f"Invalid MIME type for file: {picture.filename}")
@@ -209,11 +211,15 @@ async def add_foodshare():
             extension=extension,
             mimetype=mime_type,
             picture_expires=picture_expires,
+            restrictions=restrictions,
         )
 
         if foodshare_id:
             logger.info(f"Successfully created foodshare ID {foodshare_id} by user {user_id}")
-            return jsonify({"success": True, "foodshare_id": foodshare_id}), 201
+            # Fetch the newly created foodshare to return it in the response
+            new_foodshare = await app.storage.db.get_foodshare(foodshare_id)
+            if new_foodshare:
+                return jsonify(asdict(new_foodshare)), 201
 
         logger.error("Failed to create foodshare in database")
         return jsonify({"error": "Failed to create foodshare"}), 500
