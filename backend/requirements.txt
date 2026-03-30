@@ -6,3 +6,10 @@ pytest
 pytest-asyncio
 anyio
 itsdangerous
+Pillow
+aiofiles
+aiosmtplib
+python-dotenv
+quart-cors
+hypercorn
+uvloop

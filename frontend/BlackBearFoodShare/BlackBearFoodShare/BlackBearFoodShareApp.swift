@@ -15,14 +15,24 @@ struct MyApp: App {
 
     @StateObject var store = FoodshareStore()
 
+    @StateObject var session = SessionManager.shared
+
     var body: some Scene {
         WindowGroup {
-            FoodshareListView()
-                .environmentObject(store)
+            if session.isAuthenticated {
+                FoodshareListView()
+                    .environmentObject(store)
+                    .environmentObject(session)
+            } else {
+                LoginView()
+                    .environmentObject(session)
+            }
         }
     }
 }
 
 #Preview {
-    FoodshareListView().environmentObject(FoodshareStore())
+    FoodshareListView()
+        .environmentObject(FoodshareStore())
+        .environmentObject(SessionManager.preview)
 }

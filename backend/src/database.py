@@ -25,7 +25,7 @@ Usage:
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import aiosqlite
 import anyio
@@ -203,6 +203,7 @@ class DatabaseManager:
                     email=row["email"],
                     verified=bool(row["verified"]),
                     banned=bool(row["banned"]),
+                    is_admin=bool(row["is_admin"]),
                 )
                 logger.debug(f"User retrieved successfully by email: {email}")
                 return user
@@ -226,7 +227,7 @@ class DatabaseManager:
         """
         try:
             query = """
-            SELECT u.user_id, u.email, u.verified, u.banned
+            SELECT u.user_id, u.email, u.verified, u.banned, u.is_admin
             FROM users u
             JOIN device_tokens t ON u.user_id = t.user_id
             WHERE t.token_hash = ?
@@ -239,6 +240,7 @@ class DatabaseManager:
                         email=row["email"],
                         verified=bool(row["verified"]),
                         banned=bool(row["banned"]),
+                        is_admin=bool(row["is_admin"]),
                     )
                     logger.debug("User retrieved successfully by token")
                     return user
@@ -371,7 +373,7 @@ class DatabaseManager:
             Exception: If database operation fails
         """
         try:
-            now = datetime.now(tz=UTC)
+            now = datetime.now(tz=timezone.utc)
             select_query = "SELECT filepath FROM pictures WHERE expires < ?"
             async with self.conn.execute(select_query, (now,)) as cursor:
                 rows = await cursor.fetchall()
@@ -557,16 +559,17 @@ class DatabaseManager:
             raise
 
     async def get_all_active_foodshares(self) -> list[Foodshare]:
-        """Retrieve all active foodshares from the database.
+        """Retrieve all currently active foodshares from the database.
+
+        Filters for foodshares that are marked as active and have an end time
+        in the future (based on UTC).
 
         Returns:
             list[Foodshare]: List of all active Foodshare objects
-
-        Raises:
-            Exception: If database operation fails
         """
         try:
-            query = "SELECT foodshare_id FROM foodshares WHERE active = 1"
+            # Filter by active flag AND ensure the event hasn't ended yet
+            query = "SELECT foodshare_id FROM foodshares WHERE active = 1 AND ends > CURRENT_TIMESTAMP"
             async with self.conn.execute(query) as cursor:
                 rows = await cursor.fetchall()
 
@@ -833,6 +836,24 @@ class DatabaseManager:
             logger.error(f"Failed to create device token for user {user_id}: {str(e)}", exc_info=True)
             raise
 
+    async def delete_device_token(self, token_hash: str) -> None:
+        """Delete a device token from the database.
+
+        Args:
+            token_hash (str): The hash of the token to delete
+
+        Raises:
+            Exception: If database operation fails
+        """
+        try:
+            async with self.conn.cursor() as cursor:
+                await cursor.execute("DELETE FROM device_tokens WHERE token_hash = ?", (token_hash,))
+                await self.conn.commit()
+                logger.info("Device token deleted successfully")
+        except Exception as e:
+            logger.error(f"Failed to delete device token: {str(e)}", exc_info=True)
+            raise
+
     async def get_session_by_token(self, token_hash: str) -> DeviceSession | None:
         """Returns a DeviceSession dataclass to validate the auth token.
 
@@ -848,14 +869,19 @@ class DatabaseManager:
         try:
             async with self.conn.cursor() as cursor:
                 query = """
-                    SELECT d.user_id, u.banned
+                    SELECT d.user_id, u.banned, d.last_used
                     FROM device_tokens d
                     JOIN users u ON d.user_id = u.user_id
                     WHERE d.token_hash = ?
                 """
                 await cursor.execute(query, (token_hash,))
                 row = await cursor.fetchone()
-                session = DeviceSession(**dict(row)) if row else None
+                if row:
+                    row_dict = dict(row)
+                    row_dict["last_used"] = datetime.fromisoformat(row_dict["last_used"])
+                    session = DeviceSession(**row_dict)
+                else:
+                    session = None
                 if session:
                     logger.debug("Device session retrieved successfully")
                 else:

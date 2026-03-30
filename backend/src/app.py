@@ -34,12 +34,12 @@ Usage:
 """
 
 import logging
-import mimetypes
 import os
 from dataclasses import asdict
 from datetime import datetime
 
 import aiosqlite
+from dotenv import load_dotenv
 from quart import g, request
 from quart.json import jsonify
 from quart_rate_limiter import RateLimiter
@@ -47,18 +47,25 @@ from quart_rate_limiter import RateLimiter
 from src.auth_routes import auth_bp, require_admin, require_auth
 from src.core import QuartApp
 from src.database import DatabaseManager
+from src.email_service import ConsoleService, GmailService, MockService
 
 # Blueprint for email token verification
 from src.service import StorageService
 from src.storage import LocalFileStorage
 
+# Load environment variables
+load_dotenv()
+
 app = QuartApp(__name__)
-app.config["DB_PATH"] = "database.sqlite"
+app.config["DB_PATH"] = os.getenv("DB_PATH", "database.sqlite")
+app.config["UPLOAD_FOLDER"] = os.getenv("UPLOAD_FOLDER", "images")
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-rate_limiter = RateLimiter(app)
+# Initialize RateLimiter only if not in testing mode to avoid global state issues in tests
+if not app.config.get("TESTING"):
+    rate_limiter = RateLimiter(app)
 
 
 # Set up sqlite
@@ -146,7 +153,7 @@ async def add_foodshare():
     form = await request.form
     files = await request.files
 
-    if not form or not files:
+    if not form and not files:
         return jsonify({"error": "Missing form data or files"}), 400
 
     picture = files.get("picture")
@@ -168,23 +175,19 @@ async def add_foodshare():
 
         picture_expires = datetime.fromisoformat(str(form.get("picture_expires")))
 
+        # Get restrictions list if provided as a comma-separated string
+        restrictions_raw = form.get("restrictions", "")
+        restrictions = [r.strip() for r in restrictions_raw.split(",") if r.strip()] if restrictions_raw else None
+
         # Validate file extension and MIME type
         if not picture.filename:
             logger.warning("Missing filename in add_foodshare request")
             return jsonify({"error": "Invalid filename"}), 400
 
-        # Extract extension and validate it
+        # Extract original metadata (extension and mimetype are updated during processing)
         extension = picture.filename.split(".")[-1].lower() if "." in picture.filename else "bin"
-
-        # Whitelist allowed file extensions
-        allowed_extensions = {"jpg", "jpeg", "png", "gif"}
-        if extension not in allowed_extensions:
-            logger.warning(f"Invalid file extension: {extension}")
-            # Fixed the multiline string issue
-            return jsonify({"error": "Invalid file type. Only JPG, JPEG, PNG, and GIF files are allowed."}), 400
-
-        # Validate MIME type based on extension
-        mime_type, _ = mimetypes.guess_type(picture.filename)
+        mime_type = picture.content_type
+        # Basic mime check to ensure it's an image
         if not mime_type or not mime_type.startswith("image/"):
             logger.warning(f"Invalid MIME type for file: {picture.filename}")
             return jsonify({"error": "Invalid file type. Please upload an image file."}), 400
@@ -197,22 +200,26 @@ async def add_foodshare():
             return jsonify({"error": "File too large. Maximum file size is 10MB."}), 400
         picture.stream.seek(0)  # Reset stream position
 
-        # Create the foodshare
+        # Create the foodshare (processing handles conversion to optimized WebP)
         foodshare_id = await app.storage.create_foodshare_with_picture(
             name=name,
             location=location,
             ends=ends,
             active=active,
             user_id=user_id,
-            file_stream=picture.stream,
+            file_stream=picture.read(),  # Read the full stream for Pillow
             extension=extension,
             mimetype=mime_type,
             picture_expires=picture_expires,
+            restrictions=restrictions,
         )
 
         if foodshare_id:
             logger.info(f"Successfully created foodshare ID {foodshare_id} by user {user_id}")
-            return jsonify({"success": True, "foodshare_id": foodshare_id}), 201
+            # Fetch the newly created foodshare to return it in the response
+            new_foodshare = await app.storage.db.get_foodshare(foodshare_id)
+            if new_foodshare:
+                return jsonify(asdict(new_foodshare)), 201
 
         logger.error("Failed to create foodshare in database")
         return jsonify({"error": "Failed to create foodshare"}), 500
@@ -363,9 +370,28 @@ async def startup():
         db = DatabaseManager(db_path=app.config["DB_PATH"])
         await db.connect()
         await db.init_tables()
-        local_file_store = LocalFileStorage("images")
+        upload_folder = app.config.get("UPLOAD_FOLDER", "images")
+        local_file_store = LocalFileStorage(upload_folder)
         app.storage = StorageService(db, local_file_store)
-        logger.info("Application started successfully")
+
+        # Initialize Email Service (if not already injected by tests)
+        if not hasattr(app, "email_service"):
+            provider_type = os.getenv("EMAIL_PROVIDER", "console").lower()
+            if provider_type == "gmail":
+                gmail_user = os.getenv("GMAIL_USER")
+                gmail_pass = os.getenv("GMAIL_APP_PASSWORD")
+                logo_url = os.getenv("EMAIL_LOGO_URL")
+                if not gmail_user or not gmail_pass:
+                    logger.warning("Gmail credentials missing. Falling back to ConsoleService.")
+                    app.email_service = ConsoleService()
+                else:
+                    app.email_service = GmailService(gmail_user, gmail_pass, logo_url)
+            elif provider_type == "mock":
+                app.email_service = MockService()
+            else:
+                app.email_service = ConsoleService()
+
+        logger.info(f"Application started successfully with {type(app.email_service).__name__}")
     except Exception as e:
         logger.error(f"Failed to start application: {str(e)}", exc_info=True)
         raise

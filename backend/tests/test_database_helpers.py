@@ -34,9 +34,11 @@ class TestDataClasses:
         assert otp.expires_at == now
 
     def test_device_session_initialization(self):
-        session = DeviceSession(user_id=1, banned=0)
+        now = datetime.now()
+        session = DeviceSession(user_id=1, banned=0, last_used=now)
         assert session.user_id == 1
         assert session.banned == 0
+        assert session.last_used == now
 
     def test_picture_metadata_initialization(self):
         now = datetime.now()

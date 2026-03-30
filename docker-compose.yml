@@ -1,0 +1,63 @@
+services:
+  # The Backend Application
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bbfs-backend
+    restart: always
+    environment:
+      - VIRTUAL_HOST=${DOMAIN}
+      - VIRTUAL_PORT=8000
+      - LETSENCRYPT_HOST=${DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
+    volumes:
+      - ./backend/database.sqlite:/app/database.sqlite
+      - ./backend/images:/app/images
+    networks:
+      - proxy-nw
+
+  # Automated Nginx Reverse Proxy
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - ./nginx/vhost.d:/etc/nginx/vhost.d:ro
+    networks:
+      - proxy-nw
+
+  # Automated SSL (Let's Encrypt)
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: acme-companion
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - acme:/etc/acme.sh
+    environment:
+      - DEFAULT_EMAIL=${EMAIL}
+    depends_on:
+      - nginx-proxy
+    networks:
+      - proxy-nw
+
+networks:
+  proxy-nw:
+    name: bbfs-network
+
+volumes:
+  certs:
+  vhost:
+  html:
+  acme:

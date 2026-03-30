@@ -7,3 +7,12 @@ __pycache__
 *.sqlite
 # Xcode stuff
 xcuserdata
+
+# Allow README
+*.md
+!README.md
+
+# Backend Application
+backend/images
+.env
+.env.*

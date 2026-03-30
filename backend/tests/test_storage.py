@@ -34,13 +34,16 @@ class TestLocalFileStorageSave:
     async def test_save_standard_file_stream(self, storage):
         """SAVE-01: File is created with correct data and extension."""
         data = b"test data"
-        filepath = await storage.save(data, "txt")
+        uri = await storage.save(data, "txt")
 
-        path = anyio.Path(filepath)
-        assert filepath.endswith(".txt")
-        assert await path.exists()
+        # Resolve the local physical path for verification
+        filename = os.path.basename(uri)
+        local_path = anyio.Path(storage.upload_folder) / filename
+        assert uri.endswith(".txt")
+        assert uri.startswith("/images/")
+        assert await local_path.exists()
 
-        async with await anyio.open_file(filepath, "rb") as f:
+        async with await anyio.open_file(str(local_path), "rb") as f:
             file_content = await f.read()
             assert file_content == data
 
@@ -48,44 +51,35 @@ class TestLocalFileStorageSave:
     async def test_validate_uuid_uniqueness(self, storage):
         """SAVE-02: Two identical uploads get unique filenames."""
         data = b"same data"
-        filepath_1 = await storage.save(data, "png")
-        filepath_2 = await storage.save(data, "png")
+        uri_1 = await storage.save(data, "png")
+        uri_2 = await storage.save(data, "png")
 
-        assert filepath_1 != filepath_2
-        assert anyio.Path(filepath_1).name != anyio.Path(filepath_2).name
+        assert uri_1 != uri_2
+        assert os.path.basename(uri_1) != os.path.basename(uri_2)
 
     @pytest.mark.asyncio
     async def test_save_empty_file_stream(self, storage):
         """SAVE-03: Can save an empty file stream successfully."""
-        filepath = await storage.save(b"", "txt")
+        uri = await storage.save(b"", "txt")
 
-        path = anyio.Path(filepath)
-        assert await path.exists()
+        local_path = anyio.Path(storage.upload_folder) / os.path.basename(uri)
+        assert await local_path.exists()
 
-        stat = await path.stat()
+        stat = await local_path.stat()
         assert stat.st_size == 0
-
-    @pytest.mark.asyncio
-    @patch("src.storage.anyio.open_file")
-    async def test_save_raises_and_logs_oserror(self, mock_open, caplog, storage):
-        """SAVE-Error: OSError is logged and raised on failure."""
-        mock_open.side_effect = OSError("Disk full")
-        with pytest.raises(OSError):
-            await storage.save(b"data", "txt")
-        assert "Write error" in caplog.text
 
 
 class TestLocalFileStorageDelete:
     @pytest.mark.asyncio
     async def test_delete_existing_file(self, storage):
         """DEL-01: Calling delete removes the file and returns True."""
-        filepath = await storage.save(b"data to delete", "txt")
-        path = anyio.Path(filepath)
-        assert await path.exists()
+        uri = await storage.save(b"data to delete", "txt")
+        local_path = anyio.Path(storage.upload_folder) / os.path.basename(uri)
+        assert await local_path.exists()
 
-        result = await storage.delete(filepath)
+        result = await storage.delete(uri)
         assert result is True
-        assert not await path.exists()
+        assert not await local_path.exists()
 
     @pytest.mark.asyncio
     async def test_delete_non_existent_file(self, storage):

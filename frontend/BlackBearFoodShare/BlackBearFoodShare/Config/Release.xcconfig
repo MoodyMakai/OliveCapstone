@@ -1,0 +1,3 @@
+// Release.xcconfig
+// Configuration settings for the Release environment
+API_BASE_URL = https:\/\/blackbearfoodshare.com

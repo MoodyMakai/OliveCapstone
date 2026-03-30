@@ -2,49 +2,76 @@
 //  FoodshareListView.swift
 //  BlackBearFoodShare
 //
-//  Created by Corey Kaulenas on 12/1/25.
-//
 
 import SwiftUI
 
+@MainActor
 struct FoodshareListView: View {
-    @EnvironmentObject var store: FoodshareStore
+    @StateObject private var viewModel: FoodshareFeedViewModel
+    @EnvironmentObject var session: SessionManager
+    
     @State private var showingCreate = false
     @State private var activeFilter: DietaryRestriction? = nil
     
-    // temp auth logic
-    private var isApprovedUser: Bool {
-        true
+    init(viewModel: @autoclosure @escaping () -> FoodshareFeedViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel())
     }
-
+    
+    init() {
+        self.init(viewModel: FoodshareFeedViewModel())
+    }
+    
     // Computed property to filter the list dynamically
     var filteredItems: [FoodshareItem] {
         if let filter = activeFilter {
-            return store.items.filter { $0.foodRestrictions.contains(filter.rawValue) }
+            return viewModel.items.filter { $0.restrictions.contains(filter.rawValue) }
         }
-        return store.items
+        return viewModel.items
     }
 
     var body: some View {
         NavigationView {
-            List(filteredItems) { item in
-                
-                NavigationLink(
-                    destination: FoodshareItemView(
-                        item: item,
-                        isApprovedUser: isApprovedUser,
-                        onDelete: {
-                            delete(item)
+            ZStack {
+                if viewModel.isLoading && viewModel.items.isEmpty {
+                    ProgressView("Loading Foodshares...")
+                } else if let error = viewModel.errorMessage {
+                    ErrorView(message: error, retryAction: viewModel.loadItems)
+                } else if viewModel.items.isEmpty {
+                    VStack(spacing: 20) {
+                        Image(systemName: "takeoutbag.and.cup.and.straw")
+                            .font(.system(size: 60))
+                            .foregroundColor(.secondary)
+                        Text("No active foodshares at the moment.")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        Button("Refresh") {
+                            viewModel.loadItems()
                         }
-                    )
-                ) {
-                    FoodshareRow(item: item)
+                        .buttonStyle(.bordered)
+                    }
+                } else {
+                    List(filteredItems) { item in
+                        NavigationLink(
+                            destination: FoodshareItemView(
+                                item: item,
+                                onDelete: {
+                                    viewModel.deleteItem(item)
+                                }
+                            )
+                        ) {
+                            FoodshareRow(item: item)
+                        }
+                    }
+                    .refreshable {
+                        viewModel.loadItems()
+                    }
                 }
             }
             .navigationTitle("Foodshare")
+            .onAppear {
+                viewModel.loadItems()
+            }
             .toolbar {
-                
-
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
                         Button("All Restrictions") { activeFilter = nil }
@@ -61,28 +88,34 @@ struct FoodshareListView: View {
                     }
                 }
 
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingCreate = true }) {
                         Image(systemName: "plus")
                             .font(.title2)
                     }
                 }
+                
+                ToolbarItem(placement: .bottomBar) {
+                    Button("Logout") {
+                        session.logout()
+                    }
+                    .foregroundColor(.red)
+                }
             }
             .sheet(isPresented: $showingCreate) {
-                FoodShareCreationView()
-                    .environmentObject(store)
+                FoodshareFormView(onComplete: {
+                    viewModel.loadItems()
+                })
             }
         }
-    }
-    
-    // MMB deletion
-    private func delete(_ item: FoodshareItem) {
-        store.items.removeAll { $0.id == item.id }
     }
 }
 
 #Preview {
-    FoodshareListView()
+    let mockService = MockFoodshareService()
+    let viewModel = FoodshareFeedViewModel(service: mockService)
+    
+    FoodshareListView(viewModel: viewModel)
         .environmentObject(FoodshareStore())
+        .environmentObject(SessionManager.preview)
 }

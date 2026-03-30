@@ -1,24 +1,103 @@
+import secrets
+
 import pytest
 
-from src.app import app
+from src.app import app as quart_app
 from src.database import DatabaseManager
+from src.database_helpers import hash_token
+from src.email_service import MockService
 from src.service import StorageService
 from src.storage import LocalFileStorage
 
 
-@pytest.fixture(name="test_app", scope="function")
-async def fixture_test_app():
-    # Configure to use an in memory database
-    app.config["DB_PATH"] = ":memory:"
+class AuthClient:
+    """A wrapper around the Quart test client that automatically adds auth headers."""
 
-    async with app.test_app() as test_app:
+    def __init__(self, client, token):
+        self.client = client
+        self.token = token
+        self.headers = {"Authorization": f"Bearer {token}"}
+
+    def _add_auth(self, kwargs):
+        headers = kwargs.get("headers", {}).copy()
+        headers.update(self.headers)
+        kwargs["headers"] = headers
+        return kwargs
+
+    async def get(self, *args, **kwargs):
+        return await self.client.get(*args, **self._add_auth(kwargs))
+
+    async def post(self, *args, **kwargs):
+        return await self.client.post(*args, **self._add_auth(kwargs))
+
+    async def put(self, *args, **kwargs):
+        return await self.client.put(*args, **self._add_auth(kwargs))
+
+    async def delete(self, *args, **kwargs):
+        return await self.client.delete(*args, **self._add_auth(kwargs))
+
+    async def patch(self, *args, **kwargs):
+        return await self.client.patch(*args, **self._add_auth(kwargs))
+
+
+@pytest.fixture(name="test_app", scope="function")
+async def fixture_test_app(tmp_path):
+    # Configure to use an in memory database
+    quart_app.config["DB_PATH"] = ":memory:"
+    # Disable rate limiting for tests via TESTING flag
+    quart_app.config["TESTING"] = True
+    # Use a temporary directory for images during tests
+    quart_app.config["UPLOAD_FOLDER"] = str(tmp_path / "images")
+
+    # Inject MockService for tests
+    quart_app.email_service = MockService()
+
+    async with quart_app.test_app() as test_app:
         yield test_app
-    await app.shutdown()
+    await quart_app.shutdown()
 
 
 @pytest.fixture(name="client")
 async def fixture_client(test_app):
     return test_app.test_client()
+
+
+@pytest.fixture(name="authenticated_client")
+async def fixture_authenticated_client(test_app):
+    """Provides an AuthClient for a regular verified user."""
+    client = test_app.test_client()
+    email = "testuser@maine.edu"
+
+    # Create user and session directly in the app's database
+    db = quart_app.storage.db
+    user_id = await db.add_user(email, verified=True)
+    assert user_id
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hash_token(raw_token)
+    await db.create_device_token(user_id, token_hash)
+
+    return AuthClient(client, raw_token)
+
+
+@pytest.fixture(name="admin_client")
+async def fixture_admin_client(test_app):
+    """Provides an AuthClient for an admin user."""
+    client = test_app.test_client()
+    email = "admin@maine.edu"
+
+    db = quart_app.storage.db
+    # Create user and manually set is_admin
+    user_id = await db.add_user(email, verified=True)
+    assert user_id
+    await db.conn.execute("UPDATE users SET is_admin = 1 WHERE user_id = ?", (user_id,))
+    await db.conn.commit()
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hash_token(raw_token)
+    await db.create_device_token(user_id, token_hash)
+
+    return AuthClient(client, raw_token)
 
 
 @pytest.fixture(name="db_manager")

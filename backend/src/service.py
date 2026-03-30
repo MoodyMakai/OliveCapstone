@@ -32,8 +32,8 @@ Methods:
     list_all_surveys: Retrieve all survey responses
 """
 
+import asyncio
 import logging
-from collections.abc import Buffer
 from datetime import datetime
 
 from src.database import DatabaseManager
@@ -43,6 +43,7 @@ from src.database_helpers import (
     validate_datetime_format,
     validate_email_format,
 )
+from src.image_utils import process_image
 from src.storage import LocalFileStorage
 
 logger = logging.getLogger(__name__)
@@ -74,17 +75,20 @@ class StorageService:
 
     async def add_picture_with_file(
         self,
-        file_stream: Buffer,
+        file_stream: bytes,
         extension: str,
         mimetype: str,
         expires: datetime,
     ) -> int | None:
         """Save a picture file and record its metadata in the database.
 
+        This method automatically processes the image into an 800x800 square WebP format
+        for optimal storage and fast mobile delivery.
+
         Args:
-            file_stream (Buffer): The file stream containing the picture data
-            extension (str): The file extension of the picture
-            mimetype (str): The MIME type of the picture
+            file_stream (bytes): The file stream containing the original picture data
+            extension (str): Original file extension (ignored during processing)
+            mimetype (str): Original MIME type (ignored during processing)
             expires (datetime): The expiration date/time for the picture
 
         Returns:
@@ -92,14 +96,21 @@ class StorageService:
         """
         filepath = None
         try:
-            filepath = await self.storage.save(file_stream, extension)
+            # CPU-intensive processing is offloaded to a thread to keep the event loop responsive
+            processed_buffer = await asyncio.to_thread(process_image, file_stream)
 
-            picture_id = await self.db.add_picture(expires=expires, filepath=filepath, mimetype=mimetype)
+            # All processed images are WebP
+            webp_extension = "webp"
+            webp_mimetype = "image/webp"
+
+            filepath = await self.storage.save(processed_buffer.getbuffer(), webp_extension)
+
+            picture_id = await self.db.add_picture(expires=expires, filepath=filepath, mimetype=webp_mimetype)
             return picture_id
 
         except Exception as e:
             # Log the error with full traceback for debugging
-            logger.error(f"Error saving picture: {e}", exc_info=True)
+            logger.error(f"Error processing/saving picture: {e}", exc_info=True)
             if filepath:
                 await self.storage.delete(filepath)
             return None

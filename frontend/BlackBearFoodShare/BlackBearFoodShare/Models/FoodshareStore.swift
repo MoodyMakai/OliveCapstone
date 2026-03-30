@@ -6,17 +6,17 @@
 //
 
 import SwiftUI
-internal import Combine
+import Combine
 
 @MainActor
 class FoodshareStore: ObservableObject {
-    @Published var items: [FoodshareItem] = sampleFoodshareItems
+    @Published var items: [FoodshareItem] = []
 
     func add(_ item: FoodshareItem) {
         items.append(item)
     }
     
     func delete(_ item: FoodshareItem) {
-            items.removeAll {
-        }
+        items.removeAll { $0.id == item.id }
+    }
 }
