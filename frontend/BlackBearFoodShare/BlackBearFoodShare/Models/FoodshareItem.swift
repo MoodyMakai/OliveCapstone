@@ -38,6 +38,14 @@ struct FoodshareItem: Codable, Identifiable {
     var endTime: Date {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.date(from: ends) ?? Date()
+        if let date = formatter.date(from: ends) {
+            return date
+        }
+        // Try without fractional seconds
+        formatter.formatOptions = [.withInternetDateTime]
+        if let date = formatter.date(from: ends) {
+            return date
+        }
+        return Date()
     }
 }

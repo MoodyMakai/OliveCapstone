@@ -14,7 +14,7 @@ class SessionManager: ObservableObject {
     // For SwiftUI Previews
     static var preview: SessionManager {
         let manager = SessionManager(isAuthenticated: true)
-        manager.currentUser = User(user_id: 1, email: "preview@maine.edu", is_admin: 0)
+        manager.currentUser = User(user_id: 1, email: "preview@maine.edu", is_admin: false)
         return manager
     }
     

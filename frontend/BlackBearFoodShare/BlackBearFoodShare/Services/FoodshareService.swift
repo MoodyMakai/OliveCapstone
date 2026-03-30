@@ -39,7 +39,6 @@ class FoodshareService: FoodshareServiceProtocol {
         let body: [String: Int] = ["foodshare_id": id]
         let data = try JSONEncoder().encode(body)
         
-        struct Dummy: Decodable {}
-        let _: Dummy = try await NetworkManager.shared.request("/foodshares/close", method: "POST", body: data)
+        try await NetworkManager.shared.request("/foodshares/close", method: "POST", body: data)
     }
 }

@@ -13,7 +13,7 @@ var sampleFoodshareItems: [FoodshareItem] = [
         location: "Neville Hall, Room 101",
         ends: ISO8601DateFormatter().string(from: Date().addingTimeInterval(3600)),
         active: true,
-        creator: User(user_id: 1, email: "tester@maine.edu", is_admin: 0),
+        creator: User(user_id: 1, email: "tester@maine.edu", is_admin: false),
         picture: PictureMetadata(filepath: "https://picsum.photos/200", mimetype: "image/jpeg"),
         restrictions: ["Vegan"]
     ),
@@ -23,7 +23,7 @@ var sampleFoodshareItems: [FoodshareItem] = [
         location: "DPC Hall, Room 107",
         ends: ISO8601DateFormatter().string(from: Date().addingTimeInterval(7200)),
         active: true,
-        creator: User(user_id: 2, email: "tester2@maine.edu", is_admin: 0),
+        creator: User(user_id: 2, email: "tester2@maine.edu", is_admin: false),
         picture: PictureMetadata(filepath: "https://picsum.photos/200", mimetype: "image/jpeg"),
         restrictions: []
     )

@@ -32,7 +32,7 @@ class MockFoodshareService: FoodshareServiceProtocol {
             location: location,
             ends: ISO8601DateFormatter().string(from: ends),
             active: true,
-            creator: User(user_id: 1, email: "preview@maine.edu", is_admin: 0),
+            creator: User(user_id: 1, email: "preview@maine.edu", is_admin: false),
             picture: nil,
             restrictions: restrictions
         )
