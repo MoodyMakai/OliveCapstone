@@ -14,6 +14,7 @@ struct FoodshareItemView: View {
     @EnvironmentObject var session: SessionManager
     
     @State private var showDeleteConfirmation = false
+    @State private var showingSurvey = false
     
     // Check if the current user is the creator of this foodshare
     private var isOwner: Bool {
@@ -32,7 +33,7 @@ struct FoodshareItemView: View {
         if path.hasPrefix("http") {
             return URL(string: path)
         }
-        return URL(string: "http://localhost:5000" + path)
+        return URL(string: "http://localhost" + path)
     }
     
     var body: some View {
@@ -159,8 +160,7 @@ struct FoodshareItemView: View {
                     }
                     .alert("Close this foodshare?", isPresented: $showDeleteConfirmation) {
                         Button("Close", role: .destructive) {
-                            onDelete?()
-                            dismiss()
+                            showingSurvey = true
                         }
                         Button("Cancel", role: .cancel) { }
                     } message: {
@@ -172,6 +172,20 @@ struct FoodshareItemView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
+        .sheet(isPresented: $showingSurvey) {
+            if let id = item.foodshare_id {
+                SurveyView(
+                    foodshareID: id,
+                    onComplete: {
+                        onDelete?()
+                        dismiss()
+                    },
+                    onCancel: {
+                        showingSurvey = false
+                    }
+                )
+            }
+        }
     }
 }
 

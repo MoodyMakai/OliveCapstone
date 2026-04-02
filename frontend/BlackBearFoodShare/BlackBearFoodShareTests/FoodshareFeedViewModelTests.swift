@@ -23,6 +23,8 @@ class FoodshareFeedViewModelTests: XCTestCase {
         }
         
         func closeFoodshare(id: Int) async throws {}
+        
+        func submitSurvey(_ survey: Survey) async throws {}
     }
     
     func testLoadItems_Success() async {
@@ -39,5 +41,18 @@ class FoodshareFeedViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.items.count, 1)
         XCTAssertEqual(viewModel.items.first?.name, "Test")
         XCTAssertNil(viewModel.errorMessage)
+    }
+    
+    func testLoadItems_Failure() async {
+        let mockService = MockFoodshareService()
+        mockService.shouldError = true
+        
+        let viewModel = FoodshareFeedViewModel(service: mockService)
+        viewModel.loadItems()
+        
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        
+        XCTAssertEqual(viewModel.items.count, 0)
+        XCTAssertNotNil(viewModel.errorMessage)
     }
 }

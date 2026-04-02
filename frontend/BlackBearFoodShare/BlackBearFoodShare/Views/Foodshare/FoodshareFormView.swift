@@ -20,7 +20,11 @@ struct FoodshareFormView: View {
     }
     
     init(onComplete: @escaping () -> Void) {
-        self.init(service: FoodshareService(), onComplete: onComplete)
+        if ProcessInfo.processInfo.arguments.contains("-UITest") {
+            self.init(service: MockFoodshareService(), onComplete: onComplete)
+        } else {
+            self.init(service: FoodshareService(), onComplete: onComplete)
+        }
     }
     
     // State

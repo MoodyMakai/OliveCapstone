@@ -14,4 +14,5 @@ protocol FoodshareServiceProtocol {
                          image: Data, 
                          restrictions: [String]) async throws -> FoodshareItem
     func closeFoodshare(id: Int) async throws
+    func submitSurvey(_ survey: Survey) async throws
 }

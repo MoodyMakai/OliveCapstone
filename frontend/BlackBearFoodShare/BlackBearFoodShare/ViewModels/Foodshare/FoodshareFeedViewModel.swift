@@ -20,7 +20,11 @@ class FoodshareFeedViewModel: ObservableObject {
     }
     
     convenience init() {
-        self.init(service: FoodshareService())
+        if ProcessInfo.processInfo.arguments.contains("-UITest") {
+            self.init(service: MockFoodshareService())
+        } else {
+            self.init(service: FoodshareService())
+        }
     }
     
     func loadItems() {
