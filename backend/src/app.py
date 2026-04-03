@@ -193,12 +193,11 @@ async def add_foodshare():
             return jsonify({"error": "Invalid file type. Please upload an image file."}), 400
 
         # Validate file size (max 10MB)
-        picture.stream.seek(0, os.SEEK_END)
-        file_size = picture.stream.tell()
+        picture_data = picture.read()
+        file_size = len(picture_data)
         if file_size > 10 * 1024 * 1024:  # 10MB
             logger.warning(f"File too large: {file_size} bytes")
             return jsonify({"error": "File too large. Maximum file size is 10MB."}), 400
-        picture.stream.seek(0)  # Reset stream position
 
         # Create the foodshare (processing handles conversion to optimized WebP)
         foodshare_id = await app.storage.create_foodshare_with_picture(
@@ -207,7 +206,7 @@ async def add_foodshare():
             ends=ends,
             active=active,
             user_id=user_id,
-            file_stream=picture.read(),  # Read the full stream for Pillow
+            file_stream=picture_data,  # Pass the bytes directly
             extension=extension,
             mimetype=mime_type,
             picture_expires=picture_expires,
