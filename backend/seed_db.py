@@ -42,7 +42,7 @@ async def seed():
             f.write(f"{token}\n")
 
     # Create foodshares
-    num_foodshares = 50
+    num_foodshares = 20
     print(f"Creating {num_foodshares} foodshares...")
     for i in range(num_foodshares):
         user_id = (i % num_users) + 1

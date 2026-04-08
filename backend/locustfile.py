@@ -1,8 +1,8 @@
 import io
 import random
 
-from PIL import Image
 from locust import HttpUser, between, task
+from PIL import Image
 
 
 class FoodshareUser(HttpUser):
@@ -33,7 +33,7 @@ class FoodshareUser(HttpUser):
         img.save(buf, format="PNG")
         self.image_content = buf.getvalue()
 
-    @task(10)
+    @task(50)
     def get_foodshares(self):
         """Simulate users viewing the foodshare list."""
         self.client.get("/foodshares", headers=self.headers)
@@ -52,13 +52,13 @@ class FoodshareUser(HttpUser):
         files = {"picture": ("stress.png", self.image_content, "image/png")}
         self.client.post("/foodshares", data=data, files=files, headers=self.headers)
 
-    @task(2)
+    @task(1)
     def submit_survey(self):
         """Simulate users submitting feedback."""
         payload = {
             "num_participants": random.randint(1, 20),
             "experience": random.randint(1, 5),
             "other_thoughts": "Performance test survey submission.",
-            "foodshare_fk_id": random.randint(1, 1000),
+            "foodshare_fk_id": random.randint(1, 20),
         }
         self.client.post("/surveys", json=payload, headers=self.headers)
