@@ -37,6 +37,7 @@ struct FoodshareFormView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
     
+    @State private var showingCamera: Bool = false
     @State private var isLoading: Bool = false
     @State private var errorMessage: String?
     
@@ -46,15 +47,25 @@ struct FoodshareFormView: View {
                 Section("What's being shared?") {
                     TextField("Name (e.g. Free Pizza)", text: $name)
                     
-                    PhotosPicker(selection: $selectedItem, matching: .images) {
-                        if let data = selectedImageData, let uiImage = UIImage(data: data) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxHeight: 200)
-                        } else {
-                            Label("Select a Photo", systemImage: "photo.on.rectangle")
+                    if let data = selectedImageData, let uiImage = UIImage(data: data) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .aspectRatio(1, contentMode: .fill)
+                            .frame(maxWidth: .infinity)
+                            .cornerRadius(8)
+                            .clipped()
+                    }
+
+                    HStack(spacing: 20) {
+                        Button(action: { showingCamera = true }) {
+                            Label("Camera", systemImage: "camera")
                         }
+                        .buttonStyle(.bordered)
+                        
+                        PhotosPicker(selection: $selectedItem, matching: .images) {
+                            Label("Library", systemImage: "photo.on.rectangle")
+                        }
+                        .buttonStyle(.bordered)
                     }
                     .onChange(of: selectedItem) { newItem in
                         Task {
@@ -63,6 +74,10 @@ struct FoodshareFormView: View {
                             }
                         }
                     }
+                    
+                    Text("Note: The picture will be cropped to a box.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
                 
                 Section("Where and when?") {
@@ -117,6 +132,9 @@ struct FoodshareFormView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+            }
+            .sheet(isPresented: $showingCamera) {
+                CameraPicker(imageData: $selectedImageData)
             }
         }
     }
