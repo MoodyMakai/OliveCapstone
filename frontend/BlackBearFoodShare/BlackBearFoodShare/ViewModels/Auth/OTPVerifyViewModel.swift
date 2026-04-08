@@ -24,7 +24,11 @@ class OTPVerifyViewModel: ObservableObject {
     }
     
     convenience init(email: String) {
-        self.init(email: email, authService: AuthService())
+        if ProcessInfo.processInfo.arguments.contains("-UITest") {
+            self.init(email: email, authService: MockAuthService())
+        } else {
+            self.init(email: email, authService: AuthService())
+        }
     }
     
     func verifyOTP() {
@@ -40,6 +44,7 @@ class OTPVerifyViewModel: ObservableObject {
             do {
                 let response = try await authService.verifyOTP(email: email, otp: otp)
                 SessionManager.shared.saveToken(response.token)
+                SessionManager.shared.currentUser = response.user
             } catch {
                 errorMessage = error.localizedDescription
             }

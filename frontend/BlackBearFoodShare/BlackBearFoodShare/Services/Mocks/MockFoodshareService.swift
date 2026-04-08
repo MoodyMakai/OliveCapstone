@@ -43,4 +43,8 @@ class MockFoodshareService: FoodshareServiceProtocol {
         if shouldError { throw BBFSError.forbidden }
         lastDeletedID = id
     }
+    
+    func submitSurvey(_ survey: Survey) async throws {
+        if shouldError { throw BBFSError.serverError("Mock Survey Error") }
+    }
 }

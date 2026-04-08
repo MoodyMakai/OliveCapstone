@@ -1,7 +1,8 @@
 client_max_body_size 20m;
 
 location /images/ {
-    alias /app/images/;
+    alias /www/images/;
     expires 30d;
     add_header Cache-Control "public";
+    autoindex on;
 }

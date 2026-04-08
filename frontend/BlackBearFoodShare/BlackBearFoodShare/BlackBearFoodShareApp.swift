@@ -13,9 +13,28 @@ struct MyApp: App {
 
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    @StateObject var store = FoodshareStore()
+    @StateObject var store: FoodshareStore
+    @StateObject var session: SessionManager
 
-    @StateObject var session = SessionManager.shared
+    init() {
+        if ProcessInfo.processInfo.arguments.contains("-UITest") {
+            let mockAuth = MockAuthService()
+            
+            let sessionManager = SessionManager(isAuthenticated: false, authService: mockAuth)
+            _session = StateObject(wrappedValue: sessionManager)
+            
+            // For convenience elsewhere if needed
+            SessionManager.shared = sessionManager
+            
+            _store = StateObject(wrappedValue: FoodshareStore())
+            
+            // Clear any existing session for a clean test state
+            sessionManager.logout()
+        } else {
+            _session = StateObject(wrappedValue: SessionManager.shared)
+            _store = StateObject(wrappedValue: FoodshareStore())
+        }
+    }
 
     var body: some Scene {
         WindowGroup {

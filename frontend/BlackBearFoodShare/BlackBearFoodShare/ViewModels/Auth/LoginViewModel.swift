@@ -21,7 +21,11 @@ class LoginViewModel: ObservableObject {
     }
     
     convenience init() {
-        self.init(authService: AuthService())
+        if ProcessInfo.processInfo.arguments.contains("-UITest") {
+            self.init(authService: MockAuthService())
+        } else {
+            self.init(authService: AuthService())
+        }
     }
     
     func requestOTP() {

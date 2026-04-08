@@ -34,7 +34,9 @@ def process_image(file_stream: bytes, target_size: int = 800) -> io.BytesIO:
     """
     try:
         # Load image using Pillow
+        logger.debug(f"Attempting to process image of size {len(file_stream)} bytes")
         with Image.open(io.BytesIO(file_stream)) as img:
+            logger.debug(f"Opened image: {img.format}, {img.size}, {img.mode}")
             # Handle orientation based on EXIF data
             img = ImageOps.exif_transpose(img)
 

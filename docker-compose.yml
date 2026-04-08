@@ -7,7 +7,7 @@ services:
     container_name: bbfs-backend
     restart: always
     environment:
-      - VIRTUAL_HOST=${DOMAIN}
+      - VIRTUAL_HOST=${DOMAIN},localhost
       - VIRTUAL_PORT=8000
       - LETSENCRYPT_HOST=${DOMAIN}
       - LETSENCRYPT_EMAIL=${EMAIL}
@@ -31,6 +31,7 @@ services:
       - vhost:/etc/nginx/vhost.d
       - html:/usr/share/nginx/html
       - ./nginx/vhost.d:/etc/nginx/vhost.d:ro
+      - ./backend/images:/www/images:ro
     networks:
       - proxy-nw
 
@@ -45,6 +46,7 @@ services:
       - vhost:/etc/nginx/vhost.d
       - html:/usr/share/nginx/html
       - acme:/etc/acme.sh
+      - image_data:/www/images:ro
     environment:
       - DEFAULT_EMAIL=${EMAIL}
     depends_on:
@@ -61,3 +63,4 @@ volumes:
   vhost:
   html:
   acme:
+  image_data:

@@ -14,5 +14,6 @@ xcuserdata
 
 # Backend Application
 backend/images
+backend/stress_images
 .env
 .env.*
