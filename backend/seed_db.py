@@ -1,8 +1,17 @@
+"""Script to seed the stress test database with sample users and foodshares.
+
+This module generates a separate SQLite database for stress testing and exports
+authentication tokens to 'test_tokens.txt' for use by Locust.
+"""
+
 import asyncio
 import os
 import secrets
 import sys
 from datetime import datetime, timedelta, timezone
+
+import aiofiles
+import anyio
 
 # Add the parent directory to sys.path to import from src
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -12,11 +21,15 @@ from src.database_helpers import hash_token
 
 
 async def seed():
-    db_path = "stress_test.sqlite"
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    """Seeds the database with test users, tokens, and foodshares.
 
-    db = DatabaseManager(db_path)
+    Removes any existing database at 'stress_test.sqlite' before initialization.
+    """
+    db_path = anyio.Path("stress_test.sqlite")
+    if await db_path.exists():
+        await db_path.unlink()
+
+    db = DatabaseManager(str(db_path))
     await db.connect()
     await db.init_tables()
 
@@ -37,9 +50,9 @@ async def seed():
         tokens.append(raw_token)
 
     # Save tokens to a file for Locust to use
-    with open("test_tokens.txt", "w") as f:
+    async with aiofiles.open("test_tokens.txt", "w") as f:
         for token in tokens:
-            f.write(f"{token}\n")
+            await f.write(f"{token}\n")
 
     # Create foodshares
     num_foodshares = 20

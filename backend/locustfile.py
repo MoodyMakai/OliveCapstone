@@ -1,3 +1,9 @@
+"""Locust performance testing script for the OliveCapstone backend.
+
+This module defines the load testing tasks and user behavior for simulating
+concurrent users interacting with the foodshare API.
+"""
+
 import io
 import random
 
@@ -6,15 +12,26 @@ from PIL import Image
 
 
 class FoodshareUser(HttpUser):
+    """Simulates a user of the BlackBearFoodShare application.
+
+    Each user session starts by loading a valid authentication token and
+    preparing a placeholder image for uploads.
+    """
+
     wait_time = between(0.1, 0.5)  # More aggressive for stress testing
 
     tokens = []
 
     def on_start(self):
+        """Initializes the user session with authentication and assets.
+
+        Loads tokens from 'test_tokens.txt' on the first run and prepares
+        a sample image for upload tasks.
+        """
         # Load tokens once for the class
         if not FoodshareUser.tokens:
             try:
-                with open("test_tokens.txt", "r") as f:
+                with open("test_tokens.txt") as f:
                     FoodshareUser.tokens = [line.strip() for line in f if line.strip()]
             except FileNotFoundError:
                 print("Error: test_tokens.txt not found. Run seed_db.py first.")

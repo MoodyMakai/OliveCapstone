@@ -1,4 +1,5 @@
 import pytest
+
 from src.app import app as quart_app
 
 pytestmark = pytest.mark.asyncio
