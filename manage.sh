@@ -44,6 +44,15 @@ case "$1" in
     start)
         check_docker
         check_env
+
+        # Ensure database.sqlite is a file, not a directory (prevents Docker mount issues)
+        if [ -d "backend/database.sqlite" ]; then
+            log_warn "Found directory at backend/database.sqlite, removing it..."
+            rm -rf "backend/database.sqlite"
+        fi
+        touch backend/database.sqlite
+        mkdir -p backend/images
+
         log_info "Starting BBFS Server..."
         docker compose -f "$COMPOSE_FILE" up -d --build
         log_info "Server started successfully!"

@@ -68,6 +68,18 @@ class DatabaseManager:
         """
         # Connect to the database
         try:
+            db_path = anyio.Path(self.db_path)
+            # Ensure parent directory exists
+            if not await db_path.parent.exists():
+                await db_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Check if db_path is a directory (happens if Docker creates it as a bind mount folder)
+            if await db_path.is_dir():
+                raise IsADirectoryError(
+                    f"The database path '{self.db_path}' is a directory, not a file. "
+                    "If you are using Docker, delete the directory so it can be created as a file."
+                )
+
             self.conn = await aiosqlite.connect(self.db_path, timeout=20.0)
             self.conn.row_factory = aiosqlite.Row  # Returns dicts by default
 
