@@ -18,7 +18,7 @@ struct FoodshareRow: View {
         if path.hasPrefix("http") {
             return URL(string: path)
         }
-        return URL(string: "http://localhost:5000" + path)
+        return URL(string: "http://localhost" + path)
     }
     
     var body: some View {

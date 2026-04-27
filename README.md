@@ -42,8 +42,8 @@ The API will be available at http://localhost:5000.
 
 The frontend requires a Mac with Xcode 16.0 or later installed.
 
-1. Open the workspace file at the root of the repository:
-   open BBFS.xcworkspace
+1. Open the workspace file:
+   open frontend/BlackBearFoodShare/BlackBearFoodShare.xcodeproj/project.xcworkspace
 
 2. Select the BlackBearFoodShare scheme and an iOS Simulator (e.g., iPhone 16).
 
@@ -52,6 +52,6 @@ The frontend requires a Mac with Xcode 16.0 or later installed.
 ## Frontend Testing
 
 1. Run unit and UI tests:
-   xcodebuild -workspace BBFS.xcworkspace -scheme BlackBearFoodShare -sdk iphonesimulator test -destination 'platform=iOS Simulator,name=iPhone 16'
+   xcodebuild -workspace frontend/BlackBearFoodShare/BlackBearFoodShare.xcodeproj/project.xcworkspace -scheme BlackBearFoodShare -sdk iphonesimulator test -destination 'platform=iOS Simulator,name=iPhone 16'
 
 Alternatively, press Command+U within Xcode to run tests.

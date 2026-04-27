@@ -21,6 +21,10 @@ class AuthService: AuthServiceProtocol {
         return try await NetworkManager.shared.request("/auth/verify-otp", method: "POST", body: data, requiresAuth: false)
     }
     
+    func fetchCurrentUser() async throws -> User {
+        return try await NetworkManager.shared.request("/auth/me", method: "GET", requiresAuth: true)
+    }
+    
     func logout() async throws {
         try await NetworkManager.shared.request("/auth/logout", method: "POST", requiresAuth: true)
     }

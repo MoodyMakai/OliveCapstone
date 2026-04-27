@@ -4,5 +4,7 @@
 <dict>
 	<key>API_BASE_URL</key>
 	<string>$(API_BASE_URL)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access to take photos of the food you are sharing.</string>
 </dict>
 </plist>

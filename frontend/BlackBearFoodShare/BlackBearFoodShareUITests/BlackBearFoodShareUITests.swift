@@ -23,12 +23,45 @@ final class BlackBearFoodShareUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testPostFoodshareJourney() throws {
         let app = XCUIApplication()
+        app.launchArguments.append("-UITest")
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        // 1. Login
+        let emailField = app.textFields["Enter your @maine.edu email"]
+        XCTAssertTrue(emailField.waitForExistence(timeout: 5))
+        emailField.tap()
+        emailField.typeText("test@maine.edu")
+        
+        app.buttons["Send OTP"].tap()
+        
+        // 2. Verify OTP
+        let otpField = app.textFields["6-digit code"]
+        XCTAssertTrue(otpField.waitForExistence(timeout: 5))
+        otpField.tap()
+        otpField.typeText("123456")
+        
+        app.buttons["Verify"].tap()
+        
+        // 3. Create Foodshare
+        let plusButton = app.buttons["plus"]
+        XCTAssertTrue(plusButton.waitForExistence(timeout: 5))
+        plusButton.tap()
+        
+        let nameField = app.textFields["Name (e.g. Free Pizza)"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        nameField.tap()
+        nameField.typeText("CI Test Pizza")
+        
+        // Select building
+        app.staticTexts["Select a building"].tap()
+        app.buttons["Neville Hall"].tap()
+        
+        app.buttons["Create Foodshare"].tap()
+        
+        // 4. Verify it appears in the list (MockService adds it to sample data)
+        XCTAssertTrue(app.staticTexts["CI Test Pizza"].waitForExistence(timeout: 5))
     }
 
     @MainActor

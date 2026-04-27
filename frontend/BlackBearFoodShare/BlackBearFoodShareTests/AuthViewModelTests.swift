@@ -33,4 +33,27 @@ class AuthViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.navigateToOTP)
         XCTAssertNotNil(viewModel.errorMessage)
     }
+    
+    func testOTPVerifyViewModel_Success() async {
+        let mockService = MockAuthService()
+        let viewModel = OTPVerifyViewModel(email: "test@maine.edu", authService: mockService)
+        viewModel.otp = "123456"
+        
+        viewModel.verifyOTP()
+        
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        
+        XCTAssertEqual(mockService.lastVerifiedOTP, "123456")
+        XCTAssertNil(viewModel.errorMessage)
+    }
+    
+    func testOTPVerifyViewModel_InvalidFormat() {
+        let viewModel = OTPVerifyViewModel(email: "test@maine.edu", authService: MockAuthService())
+        viewModel.otp = "123"
+        
+        viewModel.verifyOTP()
+        
+        XCTAssertNotNil(viewModel.errorMessage)
+        XCTAssertEqual(viewModel.errorMessage, "OTP must be 6 digits.")
+    }
 }

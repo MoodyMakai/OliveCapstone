@@ -15,7 +15,7 @@ from quart import Blueprint, current_app, g, jsonify, request
 from quart_rate_limiter import rate_limit
 
 from src.core import QuartApp
-from src.database_helpers import OTPRecord, hash_token, validate_email_format
+from src.database_helpers import OTPRecord, User, hash_token, validate_email_format
 
 
 def conditional_rate_limit(limit: int, period: timedelta):
@@ -175,19 +175,56 @@ async def verify_otp():
 
     await app.storage.db.delete_otp(email)
 
-    user = await app.storage.get_user(email=email)
-    if user and user.banned:
-        return jsonify({"error": "This account is banned."}), 403
-
     user_id = await app.storage.db.create_or_verify_user(email)
     if user_id is None:
         return jsonify({"error": "Internal Server Error"}), 500
+
+    user = await app.storage.get_user(user_id=user_id)
+    if user and user.banned:
+        return jsonify({"error": "This account is banned."}), 403
 
     raw_token = secrets.token_urlsafe(32)
     hashed_token = hash_token(raw_token)
     await app.storage.db.create_device_token(user_id, hashed_token)
 
-    return jsonify({"message": "Authentication successful", "token": raw_token}), 200
+    if user is None:
+        return jsonify({"error": "Failed to retrieve user information"}), 500
+
+    return (
+        jsonify(
+            {
+                "message": "Authentication successful",
+                "token": raw_token,
+                "user": {
+                    "user_id": user.user_id,
+                    "email": user.email,
+                    "is_admin": user.is_admin,
+                },
+            }
+        ),
+        200,
+    )
+
+
+@auth_bp.route("/me", methods=["GET"])
+@require_auth
+async def get_current_user():
+    """Retrieve the profile of the currently authenticated user.
+
+    Returns:
+        tuple: JSON response with user details
+    """
+    user = cast(User, g.user)
+    return (
+        jsonify(
+            {
+                "user_id": user.user_id,
+                "email": user.email,
+                "is_admin": user.is_admin,
+            }
+        ),
+        200,
+    )
 
 
 @auth_bp.route("/logout", methods=["POST"])

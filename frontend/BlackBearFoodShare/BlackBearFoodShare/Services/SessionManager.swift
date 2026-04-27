@@ -9,11 +9,11 @@ import Combine
 
 @MainActor
 class SessionManager: ObservableObject {
-    static let shared = SessionManager()
+    static var shared = SessionManager()
     
-    // For SwiftUI Previews
+    // For UI Testing and Previews
     static var preview: SessionManager {
-        let manager = SessionManager(isAuthenticated: true)
+        let manager = SessionManager(isAuthenticated: true, authService: MockAuthService())
         manager.currentUser = User(user_id: 1, email: "preview@maine.edu", is_admin: false)
         return manager
     }
@@ -24,7 +24,10 @@ class SessionManager: ObservableObject {
     @Published var isAuthenticated: Bool = false
     @Published var currentUser: User?
     
-    internal init(isAuthenticated: Bool? = nil) {
+    private let authService: AuthServiceProtocol
+    
+    internal init(isAuthenticated: Bool? = nil, authService: AuthServiceProtocol = AuthService()) {
+        self.authService = authService
         if let isAuthenticated = isAuthenticated {
             self.isAuthenticated = isAuthenticated
         } else {
@@ -35,7 +38,19 @@ class SessionManager: ObservableObject {
     func checkSession() {
         if let _ = KeychainHelper.shared.read(service: service, account: account) {
             isAuthenticated = true
-            // In a real app, we might also store/read the User object or fetch it from the API
+            
+            // Fetch current user profile to ensure isOwner checks work
+            Task {
+                do {
+                    self.currentUser = try await authService.fetchCurrentUser()
+                } catch {
+                    print("Failed to fetch current user: \(error)")
+                    // If fetching profile fails (e.g., token expired), we should probably logout
+                    if let bbfsError = error as? BBFSError, case .unauthorized = bbfsError {
+                        logout()
+                    }
+                }
+            }
         } else {
             isAuthenticated = false
         }

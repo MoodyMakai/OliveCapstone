@@ -38,3 +38,26 @@ final class BuildingLocatorTests: XCTestCase {
         XCTAssertTrue(aliases.contains("Ferland Hall"))
     }
 }
+
+@MainActor
+final class SessionManagerTests: XCTestCase {
+    
+    func testLogout_ClearsState() {
+        let session = SessionManager(isAuthenticated: true)
+        XCTAssertTrue(session.isAuthenticated)
+        
+        session.logout()
+        
+        XCTAssertFalse(session.isAuthenticated)
+        XCTAssertNil(session.currentUser)
+    }
+    
+    func testSaveToken_UpdatesState() {
+        let session = SessionManager(isAuthenticated: false)
+        XCTAssertFalse(session.isAuthenticated)
+        
+        session.saveToken("test-token")
+        
+        XCTAssertTrue(session.isAuthenticated)
+    }
+}

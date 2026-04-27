@@ -41,4 +41,9 @@ class FoodshareService: FoodshareServiceProtocol {
         
         try await NetworkManager.shared.request("/foodshares/close", method: "POST", body: data)
     }
+    
+    func submitSurvey(_ survey: Survey) async throws {
+        let data = try JSONEncoder().encode(survey)
+        try await NetworkManager.shared.request("/surveys", method: "POST", body: data)
+    }
 }
