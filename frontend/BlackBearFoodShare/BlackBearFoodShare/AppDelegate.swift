@@ -12,19 +12,21 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
         UNUserNotificationCenter.current().delegate = self
 
-        Task {
-            let center = UNUserNotificationCenter.current()
-            do {
-                let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge, .provisional])
-                print("Notifications Allowed: \(granted)")
-
-                await MainActor.run {
-                    UIApplication.shared.registerForRemoteNotifications()
-                }
-            } catch {
-                print("error: \(error)")
-            }
-        }
+        // TODO: Re-enable push notifications when deploying to production
+        // Push notifications require proper provisioning profiles and aps-environment entitlement
+        // Task {
+        //     let center = UNUserNotificationCenter.current()
+        //     do {
+        //         let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge, .provisional])
+        //         print("Notifications Allowed: \(granted)")
+        //
+        //         await MainActor.run {
+        //             UIApplication.shared.registerForRemoteNotifications()
+        //         }
+        //     } catch {
+        //         print("error: \(error)")
+        //     }
+        // }
 
         return true
     }

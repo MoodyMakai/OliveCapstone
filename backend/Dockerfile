@@ -9,9 +9,14 @@ ENV PORT=8000
 WORKDIR /app
 
 # Install system dependencies
+# libjpeg-dev, zlib1g-dev, libwebp-dev, libtiff5-dev are required for Pillow image processing
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libsqlite3-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    libwebp-dev \
+    libtiff5-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
