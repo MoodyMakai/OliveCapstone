@@ -10,6 +10,7 @@ WORKDIR /app
 
 # Install system dependencies
 # libjpeg-dev, zlib1g-dev, libwebp-dev, libtiff5-dev are required for Pillow image processing
+# libheif-examples and libheif-dev are required for HEIC/HEIF support via pillow-heif
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libsqlite3-dev \
@@ -17,6 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g-dev \
     libwebp-dev \
     libtiff5-dev \
+    libheif-examples \
+    libheif-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

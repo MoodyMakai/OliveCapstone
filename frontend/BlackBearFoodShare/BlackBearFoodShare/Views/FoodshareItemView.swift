@@ -33,7 +33,12 @@ struct FoodshareItemView: View {
         if path.hasPrefix("http") {
             return URL(string: path)
         }
-        return URL(string: "http://localhost" + path)
+        // Load API base URL from Info.plist configuration
+        guard let baseURL = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String else {
+            return nil
+        }
+        let cleanBaseURL = baseURL.replacingOccurrences(of: "\\", with: "")
+        return URL(string: cleanBaseURL + path)
     }
     
     var body: some View {

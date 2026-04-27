@@ -9,7 +9,16 @@ import logging
 
 from PIL import Image, ImageOps
 
-logger = logging.getLogger(__name__)
+# Register HEIF/HEIC support if available (handles iPhone library photos)
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+    logger = logging.getLogger(__name__)
+    logger.info("HEIF/HEIC support enabled via pillow-heif")
+except ImportError:
+    logger = logging.getLogger(__name__)
+    logger.warning("pillow-heif not installed; HEIC images may fail to process")
 
 
 def process_image(file_stream: bytes, target_size: int = 800) -> io.BytesIO:

@@ -69,8 +69,11 @@ struct FoodshareFormView: View {
                     }
                     .onChange(of: selectedItem) { newItem in
                         Task {
-                            if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                                selectedImageData = data
+                            if let data = try? await newItem?.loadTransferable(type: Data.self),
+                               let uiImage = UIImage(data: data) {
+                                // Convert to JPEG with compression to match camera behavior
+                                // This ensures consistent format and reduces file size
+                                selectedImageData = uiImage.jpegData(compressionQuality: 0.8)
                             }
                         }
                     }
