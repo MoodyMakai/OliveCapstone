@@ -103,7 +103,7 @@ class StorageService:
             webp_extension = "webp"
             webp_mimetype = "image/webp"
 
-            filepath = await self.storage.save(processed_buffer.getbuffer(), webp_extension)
+            filepath = await self.storage.save(processed_buffer.getvalue(), webp_extension)
 
             picture_id = await self.db.add_picture(expires=expires, filepath=filepath, mimetype=webp_mimetype)
             return picture_id
